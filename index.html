@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>JIBWIS First Aid System</title>
+<title>First Aid System</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600&display=swap" rel="stylesheet">
 
@@ -20,7 +20,7 @@
 *{margin:0;padding:0;box-sizing:border-box;font-family:Poppins;}
 
 body{
-    background: radial-gradient(circle at top left,#1a1a40,#0f0f1a);
+    background: radial-gradient(circle at top,#1a1a40,#0f0f1a);
     color:var(--text);
 }
 
@@ -37,7 +37,6 @@ body{
     padding:35px;
     border-radius:12px;
     width:320px;
-    box-shadow:0 15px 40px rgba(0,0,0,0.5);
 }
 
 input{
@@ -47,7 +46,7 @@ input{
     border:none;
     border-radius:8px;
     background:#111;
-    color:white;
+    color:#fff;
 }
 
 .btn{
@@ -67,8 +66,8 @@ input{
 
 .sidebar{
     width:240px;
-    background:#111;
     height:100vh;
+    background:#111;
     padding:20px;
 }
 
@@ -88,14 +87,15 @@ input{
     padding:25px;
 }
 
+/* CARD */
 .card{
     background:var(--card);
     padding:20px;
     border-radius:12px;
     margin-top:20px;
-    overflow-x:auto;
 }
 
+/* TABLE */
 table{
     width:100%;
     border-collapse:collapse;
@@ -112,7 +112,8 @@ th{color:var(--muted);}
 .modal{
     position:fixed;
     top:0;left:0;
-    width:100%;height:100%;
+    width:100%;
+    height:100%;
     background:rgba(0,0,0,0.7);
     display:flex;
     justify-content:center;
@@ -134,21 +135,24 @@ th{color:var(--muted);}
     background:#111;
     padding:12px 18px;
     border-radius:8px;
+    z-index:999;
 }
 
 /* LOADER */
 .loader{
     position:fixed;
     top:0;left:0;
-    width:100%;height:100%;
+    width:100%;
+    height:100%;
     background:rgba(0,0,0,0.8);
     display:flex;
     justify-content:center;
     align-items:center;
+    z-index:1000;
 }
 
 .progress{
-    width:250px;
+    width:260px;
     height:8px;
     background:#222;
     border-radius:10px;
@@ -158,7 +162,7 @@ th{color:var(--muted);}
 #bar{
     height:100%;
     width:0%;
-    background:linear-gradient(90deg,#8e2de2,#4a00e0);
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
 }
 
 .hidden{display:none}
@@ -195,7 +199,7 @@ th{color:var(--muted);}
 
 <div id="rSec">
     <h2>Recruits</h2>
-    <button class="btn" onclick="openModal('Recruit')">+ Add</button>
+    <button class="btn" onclick="openModal('Recruit')">+ Add Recruit</button>
 
     <div class="card">
         <table>
@@ -209,7 +213,7 @@ th{color:var(--muted);}
 
 <div id="oSec" class="hidden">
     <h2>Officers</h2>
-    <button class="btn" onclick="openModal('Officer')">+ Add</button>
+    <button class="btn" onclick="openModal('Officer')">+ Add Officer</button>
 
     <div class="card">
         <table>
@@ -229,10 +233,12 @@ th{color:var(--muted);}
     <div class="modal-box">
         <h3 id="title"></h3>
         <input id="name" placeholder="Name">
+
         <div id="extra" class="hidden">
             <input id="user" placeholder="Username">
             <input id="pass" placeholder="Password">
         </div>
+
         <button class="btn" onclick="save()">Save</button>
     </div>
 </div>
@@ -251,12 +257,17 @@ th{color:var(--muted);}
 </div>
 
 <script>
-const API="https://script.google.com/macros/s/AKfycbyMmxj09yTqmPgz4fpzY9qGGQx-sA0fLzg21wXPe1YBU86OVbt0jkXOqxuoNH25gIkk/exec";
+const API="YOUR_GOOGLE_SCRIPT_URL_HERE";
 
 let ROLE="",ME="",TYPE="";
 
+/* FIXED ELEMENTS */
+const toastDiv=document.getElementById("toast");
+const loader=document.getElementById("loader");
+const bar=document.getElementById("bar");
+
 /* TOAST */
-function toast(msg){
+function showToast(msg){
     toastDiv.innerText=msg;
     toastDiv.classList.remove("hidden");
     setTimeout(()=>toastDiv.classList.add("hidden"),3000);
@@ -274,49 +285,72 @@ function startLoader(){
                 clearInterval(i);
                 setTimeout(res,200);
             }
-        },80);
+        },70);
     });
+}
+
+function stopLoader(){
+    loader.classList.add("hidden");
+    bar.style.width="0%";
 }
 
 /* LOGIN */
 async function login(){
-    let u=document.getElementById("u").value;
-    let p=document.getElementById("p").value;
+    let u=document.getElementById("u").value.trim();
+    let p=document.getElementById("p").value.trim();
 
-    let loadAnim=startLoader();
+    if(!u||!p){
+        showToast("Enter login details");
+        return;
+    }
 
-    let r=await fetch(API,{
-        method:"POST",
-        body:JSON.stringify({action:"login",username:u,password:p})
-    });
+    try{
+        let load=startLoader();
 
-    let d=await r.json();
-    await loadAnim;
-    loader.classList.add("hidden");
+        let res=await fetch(API,{
+            method:"POST",
+            body:JSON.stringify({action:"login",username:u,password:p})
+        });
 
-    if(d.success){
-        toast("Login successful");
-        ROLE=d.role; ME=d.name;
+        let data=await res.json();
+        await load;
 
-        setTimeout(()=>{
-            loginPage.classList.add("hidden");
-            dash.classList.remove("hidden");
-            userInfo.innerText=ROLE+" | "+ME;
+        stopLoader();
 
-            if(ROLE==="Admin") adminNav.classList.remove("hidden");
+        if(data.success){
+            showToast("Login successful");
 
-            load();
-        },600);
+            ROLE=data.role;
+            ME=data.name;
 
-    }else toast("Login failed");
+            setTimeout(()=>{
+                loginPage.classList.add("hidden");
+                dash.classList.remove("hidden");
+
+                userInfo.innerText=ROLE+" | "+ME;
+
+                if(ROLE==="Admin") adminNav.classList.remove("hidden");
+
+                loadData();
+            },500);
+
+        }else{
+            showToast("Invalid login");
+        }
+
+    }catch(e){
+        stopLoader();
+        showToast("Server error");
+    }
 }
 
 /* LOAD */
-async function load(){
+async function loadData(){
     let r=await fetch(API,{
         method:"POST",
         body:JSON.stringify({action:"getRecruits",role:ROLE,user:ME})
     });
+
     let d=await r.json();
 
     if(d.success){
@@ -330,6 +364,7 @@ async function load(){
             method:"POST",
             body:JSON.stringify({action:"getOfficers"})
         });
+
         let od=await o.json();
 
         oBody.innerHTML=od.data.map(x=>`
@@ -368,7 +403,7 @@ async function save(){
     }
 
     modal.classList.add("hidden");
-    load();
+    loadData();
 }
 
 /* NAV */
@@ -379,4 +414,4 @@ function show(s){
 </script>
 
 </body>
-    </html>
+</html>
