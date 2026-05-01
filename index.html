@@ -1,340 +1,189 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>JIBWIS First Aid</title>
-
-<style>
-:root{
---primary:#1b5e20;
---secondary:#2e7d32;
---accent:#ffd700;
---danger:#c62828;
---bg:#f4f7f6;
---white:#fff;
-}
-
-body{
-margin:0;
-font-family:Poppins, sans-serif;
-background:var(--bg);
-}
-
-/* LOGIN */
-#loginPage{
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
-background:linear-gradient(135deg,var(--primary),var(--secondary));
-}
-
-.login-card{
-background:white;
-padding:25px;
-border-radius:12px;
-width:90%;
-max-width:350px;
-text-align:center;
-}
-
-input{
-width:100%;
-padding:12px;
-margin:10px 0;
-border-radius:6px;
-border:1px solid #ddd;
-}
-
-/* BUTTON */
-.btn{
-padding:10px;
-border:none;
-border-radius:6px;
-cursor:pointer;
-font-weight:bold;
-}
-
-.btn-primary{background:var(--primary);color:white}
-.btn-danger{background:var(--danger);color:white}
-.btn-accent{background:var(--accent)}
-
-/* DASHBOARD */
-#dashboardPage{
-display:none;
-}
-
-/* SIDEBAR */
-.sidebar{
-position:fixed;
-left:-250px;
-top:0;
-width:250px;
-height:100%;
-background:var(--primary);
-color:white;
-transition:0.3s;
-padding-top:20px;
-z-index:1000;
-}
-
-.sidebar.active{left:0}
-
-.nav-item{
-padding:15px;
-cursor:pointer;
-}
-
-.nav-item:hover{background:rgba(255,255,255,0.1)}
-
-/* MAIN */
-.main{
-padding:15px;
-}
-
-/* TOP */
-.topbar{
-display:flex;
-justify-content:space-between;
-align-items:center;
-}
-
-.menu-btn{
-background:var(--primary);
-color:white;
-padding:10px;
-border:none;
-}
-
-/* CARD */
-.card{
-background:white;
-padding:15px;
-border-radius:10px;
-overflow:auto;
-}
-
-/* TABLE */
-table{
-width:100%;
-min-width:500px;
-border-collapse:collapse;
-}
-
-th,td{
-padding:10px;
-border-bottom:1px solid #eee;
-}
-
-/* DESKTOP */
-@media(min-width:768px){
-.sidebar{left:0}
-.main{margin-left:260px}
-.menu-btn{display:none}
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JIBWIS Nguru - First Aid System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #1b5e20; --gold: #ffd700; --danger: #c62828; --bg: #f4f7f6; }
+        body { font-family: 'Poppins', sans-serif; margin: 0; background: var(--bg); overflow-x: hidden; }
+        .hidden { display: none !important; }
+        
+        /* Login */
+        #loginPage { height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--primary); }
+        .login-card { background: white; padding: 40px; border-radius: 15px; width: 350px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        
+        /* Sidebar */
+        #dashPage { display: flex; min-height: 100vh; }
+        .sidebar { width: 260px; background: var(--primary); color: white; transition: 0.3s; position: fixed; height: 100vh; }
+        .main { margin-left: 260px; flex: 1; padding: 30px; }
+        .nav-item { padding: 15px 25px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05); transition: 0.2s; }
+        .nav-item:hover { background: rgba(255,255,255,0.1); }
+        
+        /* Table */
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { text-align: left; background: #fafafa; padding: 15px; color: #666; font-size: 13px; }
+        td { padding: 15px; border-bottom: 1px solid #eee; }
+        
+        /* Buttons */
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-family: inherit; }
+        .btn-green { background: var(--primary); color: white; }
+        .btn-gold { background: var(--gold); color: black; }
+        .btn-red { background: #fff1f0; color: var(--danger); border: 1px solid var(--danger); }
+    </style>
 </head>
-
 <body>
 
-<!-- LOGIN -->
 <div id="loginPage">
-<div class="login-card">
-<h2>JIBWIS NGURU</h2>
-
-<input id="userInp" placeholder="Username">
-<input id="passInp" type="password" placeholder="Password">
-
-<button class="btn btn-primary" style="width:100%" onclick="handleLogin()">Login</button>
-<p id="errorMsg" style="color:red"></p>
-</div>
+    <div class="login-card">
+        <h2 style="color: var(--primary)">JIBWIS NGURU</h2>
+        <p>First Aid Group Login</p>
+        <input type="text" id="u" placeholder="Username">
+        <input type="password" id="p" placeholder="Password">
+        <button class="btn btn-green" style="width:100%" id="loginBtn" onclick="doLogin()">Login</button>
+    </div>
 </div>
 
-<!-- DASHBOARD -->
-<div id="dashboardPage">
+<div id="dashPage" class="hidden">
+    <div class="sidebar">
+        <div style="padding: 30px 25px; border-bottom: 1px solid rgba(255,255,255,0.1)">
+            <h3 style="margin:0">JIBWIS NGURU</h3>
+            <small id="roleText" style="color: var(--gold)"></small>
+        </div>
+        <div class="nav-item" onclick="showSection('recruits')">📋 Recruits</div>
+        <div id="adminLink" class="nav-item hidden" onclick="showSection('officers')">👨‍✈️ Manage Officers</div>
+        <div class="nav-item" onclick="location.reload()" style="margin-top: 50px; color: #ffab91;">🚪 Logout</div>
+    </div>
 
-<div class="sidebar" id="sidebar">
-<h3 style="text-align:center">JIBWIS</h3>
+    <div class="main">
+        <div id="recruitsSection">
+            <div style="display:flex; justify-content: space-between; align-items:center;">
+                <h2>Recruits Management</h2>
+                <button class="btn btn-green" onclick="add('Recruit')">+ Add Recruit</button>
+            </div>
+            <div class="card">
+                <table>
+                    <thead><tr><th>Name</th><th>Officer</th><th>Attendance</th><th>Action</th></tr></thead>
+                    <tbody id="rBody"></tbody>
+                </table>
+            </div>
+        </div>
 
-<div class="nav-item" onclick="switchTab('recruits')">Recruits</div>
-<div class="nav-item" id="adminLink" style="display:none" onclick="switchTab('officers')">Officers</div>
-<div class="nav-item" onclick="logout()">Logout</div>
-</div>
-
-<div class="main">
-
-<button class="menu-btn" onclick="toggleMenu()">☰</button>
-
-<!-- RECRUITS -->
-<div id="recruitView">
-<div class="topbar">
-<h3>Recruits</h3>
-<button class="btn btn-primary" onclick="openAddRecruit()">+ Add</button>
-</div>
-
-<div class="card">
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Added By</th>
-<th>Days</th>
-<th>Action</th>
-</tr>
-</thead>
-<tbody id="recruitTableBody"></tbody>
-</table>
-</div>
-</div>
-
-<!-- OFFICERS -->
-<div id="officerView" style="display:none">
-<div class="topbar">
-<h3>Officers</h3>
-<button class="btn btn-primary" onclick="openAddOfficer()">+ Add</button>
-</div>
-
-<div class="card">
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Username</th>
-<th></th>
-</tr>
-</thead>
-<tbody id="officerTableBody"></tbody>
-</table>
-</div>
-</div>
-
-</div>
+        <div id="officersSection" class="hidden">
+            <div style="display:flex; justify-content: space-between; align-items:center;">
+                <h2>Training Officers</h2>
+                <button class="btn btn-green" onclick="add('Officer')">+ Add Officer</button>
+            </div>
+            <div class="card">
+                <table>
+                    <thead><tr><th>Name</th><th>Username</th><th>Action</th></tr></thead>
+                    <tbody id="oBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
-let CURRENT_USER=null;
-let CURRENT_ROLE=null;
+    const API_URL = "https://script.google.com/macros/s/AKfycbyMmxj09yTqmPgz4fpzY9qGGQx-sA0fLzg21wXPe1YBU86OVbt0jkXOqxuoNH25gIkk/exec";
+    let ME = "", ROLE = "";
+    const isWeekend = [0, 6].includes(new Date().getDay());
 
-// LOGIN
-function handleLogin(){
-const u=userInp.value;
-const p=passInp.value;
+    async function apiCall(data) {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+        return response.json();
+    }
 
-if(u==="admin" && p==="admin123"){
-setup("Admin","Admin");
-return;
-}
+    async function doLogin() {
+        const u = document.getElementById('u').value;
+        const p = document.getElementById('p').value;
+        const btn = document.getElementById('loginBtn');
+        
+        btn.innerText = "Loading...";
+        btn.disabled = true;
 
-google.script.run.withSuccessHandler(function(user){
-if(user){
-setup(user.name,"Officer");
-}else{
-errorMsg.innerText="Invalid login";
-}
-}).checkLogin(u,p);
-}
+        try {
+            const res = await apiCall({ action: "login", u, p });
+            if (res.success) {
+                ME = res.name; ROLE = res.role;
+                document.getElementById('loginPage').classList.add('hidden');
+                document.getElementById('dashPage').classList.remove('hidden');
+                document.getElementById('roleText').innerText = ROLE + " | " + ME;
+                if(ROLE === 'Admin') document.getElementById('adminLink').classList.remove('hidden');
+                loadData();
+            } else {
+                alert("Invalid Credentials");
+                btn.innerText = "Login";
+                btn.disabled = false;
+            }
+        } catch (e) {
+            alert("Error connecting to server. Make sure you deployed as 'Anyone'.");
+            btn.innerText = "Login";
+            btn.disabled = false;
+        }
+    }
 
-// SETUP
-function setup(name,role){
-CURRENT_USER=name;
-CURRENT_ROLE=role;
+    async function loadData() {
+        const recruits = await apiCall({ action: "getRecruits", role: ROLE, user: ME });
+        let h = "";
+        recruits.forEach(r => {
+            h += `<tr>
+                <td><b>${r[1]}</b></td>
+                <td>${r[2]}</td>
+                <td>${r[3]}</td>
+                <td>
+                    ${isWeekend ? `<button class="btn btn-gold" onclick="mark('${r[0]}')">Present</button>` : '<small>Weekends Only</small>'}
+                    ${ROLE === 'Admin' ? `<button class="btn btn-red" onclick="del('Recruits','${r[0]}')">Del</button>` : ''}
+                </td>
+            </tr>`;
+        });
+        document.getElementById('rBody').innerHTML = h || "<tr><td colspan='4'>No records found.</td></tr>";
 
-loginPage.style.display="none";
-dashboardPage.style.display="block";
+        if (ROLE === 'Admin') {
+            const officers = await apiCall({ action: "getOfficers" });
+            let oh = "";
+            officers.forEach(o => {
+                oh += `<tr><td>${o[1]}</td><td>${o[2]}</td><td><button class="btn btn-red" onclick="del('Officers','${o[0]}')">Remove</button></td></tr>`;
+            });
+            document.getElementById('oBody').innerHTML = oh;
+        }
+    }
 
-if(role==="Admin"){
-adminLink.style.display="block";
-}
+    async function mark(id) {
+        await apiCall({ action: "mark", id, user: ME });
+        loadData();
+    }
 
-refreshData();
-}
+    async function del(type, id) {
+        if(confirm("Delete this record permanently?")) {
+            await apiCall({ action: "delete", type, id });
+            loadData();
+        }
+    }
 
-// LOAD
-function refreshData(){
-google.script.run.withSuccessHandler(renderRecruits).getFilteredData();
+    function showSection(s) {
+        document.getElementById('recruitsSection').classList.toggle('hidden', s !== 'recruits');
+        document.getElementById('officersSection').classList.toggle('hidden', s !== 'officers');
+    }
 
-if(CURRENT_ROLE==="Admin"){
-google.script.run.withSuccessHandler(renderOfficers).getOfficers();
-}
-}
-
-// RENDER
-function renderRecruits(data){
-let html="";
-data.slice(1).forEach(r=>{
-html+=`
-<tr>
-<td>${r[1]}</td>
-<td>${r[2]}</td>
-<td>${r[3]}</td>
-<td>
-<button class="btn btn-accent" onclick="mark('${r[0]}')">✔</button>
-<button class="btn btn-danger" onclick="removeRow('Recruits','${r[0]}')">🗑</button>
-</td>
-</tr>`;
-});
-recruitTableBody.innerHTML=html;
-}
-
-function renderOfficers(data){
-let html="";
-data.slice(1).forEach(r=>{
-html+=`
-<tr>
-<td>${r[1]}</td>
-<td>${r[2]}</td>
-<td>
-<button class="btn btn-danger" onclick="removeRow('Officers','${r[0]}')">❌</button>
-</td>
-</tr>`;
-});
-officerTableBody.innerHTML=html;
-}
-
-// ACTIONS
-function openAddRecruit(){
-let name=prompt("Recruit Name");
-if(name){
-google.script.run.withSuccessHandler(refreshData).addRecruit(name,CURRENT_USER);
-}
-}
-
-function openAddOfficer(){
-let name=prompt("Name");
-let user=prompt("Username");
-let pass=prompt("Password");
-
-if(name&&user&&pass){
-google.script.run.withSuccessHandler(refreshData).addOfficer(name,user,pass);
-}
-}
-
-function mark(id){
-google.script.run.withSuccessHandler(alert).markAttendance(id);
-refreshData();
-}
-
-function removeRow(type,id){
-if(confirm("Delete?")){
-google.script.run.withSuccessHandler(refreshData).deleteRow(type,id);
-}
-}
-
-// UI
-function toggleMenu(){
-sidebar.classList.toggle("active");
-}
-
-function switchTab(tab){
-recruitView.style.display = tab==="recruits"?"block":"none";
-officerView.style.display = tab==="officers"?"block":"none";
-}
-
-function logout(){
-location.reload();
-}
+    async function add(type) {
+        let n = prompt("Enter Name:");
+        if(!n) return;
+        if(type === 'Recruit') {
+            await apiCall({ action: "addRecruit", name: n, user: ME });
+        } else {
+            let u = prompt("Username:"), p = prompt("Password:");
+            await apiCall({ action: "addOfficer", name: n, u, p });
+        }
+        loadData();
+    }
 </script>
-
 </body>
-</html>
+  </html>
+  
