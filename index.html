@@ -2,87 +2,56 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>JIBWIS System</title>
-
-<link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>System</title>
 
 <style>
-body{
-    margin:0;
-    font-family:Poppins;
-    background:#0f0f1a;
-    color:white;
-}
-
+body{font-family:Arial;background:#0f0f1a;color:white;margin:0}
 .hidden{display:none}
 
-/* LOGIN */
-#loginPage{
-    height:100vh;
-    display:flex;
-    justify-content:center;
-    align-items:center;
+#login{
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
 }
 
 .box{
-    background:#1a1a2e;
-    padding:30px;
-    border-radius:10px;
-    width:300px;
+  background:#1a1a2e;
+  padding:20px;
+  border-radius:10px;
+  width:280px;
 }
 
 input{
-    width:100%;
-    padding:10px;
-    margin:10px 0;
-}
-
-/* DASH */
-#dash{
-    display:flex;
-}
-
-.sidebar{
-    width:220px;
-    background:#111;
-    height:100vh;
-    padding:20px;
-}
-
-.nav{
-    padding:10px;
-    cursor:pointer;
-}
-
-.main{
-    flex:1;
-    padding:20px;
-}
-
-.card{
-    background:#1a1a2e;
-    padding:20px;
-    margin-top:20px;
-    border-radius:10px;
-}
-
-table{
-    width:100%;
-    border-collapse:collapse;
-}
-
-th,td{
-    padding:10px;
-    border-bottom:1px solid #333;
+  width:100%;
+  padding:10px;
+  margin:10px 0;
 }
 
 button{
-    padding:8px 12px;
-    background:#8e2de2;
-    color:white;
-    border:none;
-    cursor:pointer;
+  width:100%;
+  padding:10px;
+  background:#8e2de2;
+  border:none;
+  color:white;
+  cursor:pointer;
+}
+
+#dash{
+  display:flex;
+}
+
+.sidebar{
+  width:200px;
+  background:#111;
+  height:100vh;
+  padding:10px;
+}
+
+.main{
+  flex:1;
+  padding:20px;
 }
 </style>
 </head>
@@ -90,120 +59,99 @@ button{
 <body>
 
 <!-- LOGIN -->
-<div id="loginPage">
+<div id="login">
   <div class="box">
-    <h2>Login</h2>
-    <input id="u" placeholder="Username">
-    <input id="p" type="password" placeholder="Password">
+    <h3>Login</h3>
+    <input id="u" placeholder="username">
+    <input id="p" type="password" placeholder="password">
     <button onclick="login()">Login</button>
+    <p id="msg"></p>
   </div>
 </div>
 
-<!-- DASHBOARD -->
+<!-- DASH -->
 <div id="dash" class="hidden">
 
 <div class="sidebar">
-  <h3 id="info"></h3>
-  <div class="nav" onclick="show('r')">Recruits</div>
-  <div class="nav hidden" id="adminNav" onclick="show('o')">Officers</div>
+  <h4 id="info"></h4>
+  <div onclick="load()">Recruits</div>
 </div>
 
 <div class="main">
-
-<div id="rSec">
-<h2>Recruits</h2>
-<button onclick="openModal()">Add</button>
-
-<div class="card">
-<table>
-<thead><tr><th>Name</th><th>Officer</th><th>Attendance</th></tr></thead>
-<tbody id="rBody"></tbody>
-</table>
-</div>
+  <h3>Dashboard</h3>
+  <div id="out"></div>
 </div>
 
-<div id="oSec" class="hidden">
-<h2>Officers</h2>
-
-<div class="card">
-<table>
-<thead><tr><th>Name</th><th>Username</th></tr></thead>
-<tbody id="oBody"></tbody>
-</table>
-</div>
-</div>
-
-</div>
 </div>
 
 <script>
 const API="https://script.google.com/macros/s/AKfycbyNygJFW5OmJLMKxTEDzTTQDFmEYCcw4MMpW6qYpAB5OAnpFUxe2i28JqkUZs5tcF8/exec";
 
-let ROLE="",ME="";
+let ROLE="",USER="";
+
+/* SAFE FETCH */
+async function post(data){
+  try{
+    let r=await fetch(API,{
+      method:"POST",
+      body:JSON.stringify(data)
+    });
+
+    let text=await r.text();
+    return JSON.parse(text);
+  }catch(e){
+    console.log(e);
+    return {success:false};
+  }
+}
 
 /* LOGIN */
 async function login(){
+
 let u=document.getElementById("u").value;
 let p=document.getElementById("p").value;
 
-let r=await fetch(API,{
-method:"POST",
-body:JSON.stringify({action:"login",username:u,password:p})
+let res=await post({
+  action:"login",
+  username:u,
+  password:p
 });
 
-let d=await r.json();
+if(res.success){
 
-if(d.success){
-ROLE=d.role;
-ME=d.username||d.name;
+ROLE=res.role;
+USER=res.username || res.name;
 
-loginPage.classList.add("hidden");
+login.style.display="none";
 dash.classList.remove("hidden");
 
-info.innerText=ROLE+" | "+ME;
-
-if(ROLE==="Admin") adminNav.classList.remove("hidden");
+info.innerText=ROLE+" | "+USER;
 
 load();
+
 }else{
-alert("Invalid login");
+msg.innerText="Invalid login";
 }
 }
 
-/* LOAD */
+/* LOAD RECRUITS */
 async function load(){
 
-let r=await fetch(API,{
-method:"POST",
-body:JSON.stringify({action:"getRecruits",role:ROLE,user:ME})
+let res=await post({
+  action:"getRecruits",
+  role:ROLE,
+  user:USER
 });
 
-let d=await r.json();
+if(res.success){
 
-rBody.innerHTML=d.data.map(x=>`
-<tr><td>${x.name}</td><td>${x.officer}</td><td>${x.attendance}</td></tr>
-`).join("");
+out.innerHTML=res.data.map(r=>
+  `<div>${r.name} - ${r.officer}</div>`
+).join("");
 
-if(ROLE==="Admin"){
-let o=await fetch(API,{
-method:"POST",
-body:JSON.stringify({action:"getOfficers"})
-});
-
-let od=await o.json();
-
-oBody.innerHTML=od.data.map(x=>`
-<tr><td>${x.name}</td><td>${x.username}</td></tr>
-`).join("");
 }
-}
-
-/* NAV */
-function show(s){
-rSec.classList.toggle("hidden",s!=="r");
-oSec.classList.toggle("hidden",s!=="o");
 }
 </script>
 
 </body>
-    </html>
+</html>
