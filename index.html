@@ -1,189 +1,327 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JIBWIS Nguru - First Aid System</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        :root { --primary: #1b5e20; --gold: #ffd700; --danger: #c62828; --bg: #f4f7f6; }
-        body { font-family: 'Poppins', sans-serif; margin: 0; background: var(--bg); overflow-x: hidden; }
-        .hidden { display: none !important; }
-        
-        /* Login */
-        #loginPage { height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--primary); }
-        .login-card { background: white; padding: 40px; border-radius: 15px; width: 350px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        
-        /* Sidebar */
-        #dashPage { display: flex; min-height: 100vh; }
-        .sidebar { width: 260px; background: var(--primary); color: white; transition: 0.3s; position: fixed; height: 100vh; }
-        .main { margin-left: 260px; flex: 1; padding: 30px; }
-        .nav-item { padding: 15px 25px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05); transition: 0.2s; }
-        .nav-item:hover { background: rgba(255,255,255,0.1); }
-        
-        /* Table */
-        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th { text-align: left; background: #fafafa; padding: 15px; color: #666; font-size: 13px; }
-        td { padding: 15px; border-bottom: 1px solid #eee; }
-        
-        /* Buttons */
-        .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-family: inherit; }
-        .btn-green { background: var(--primary); color: white; }
-        .btn-gold { background: var(--gold); color: black; }
-        .btn-red { background: #fff1f0; color: var(--danger); border: 1px solid var(--danger); }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JIBWIS Nguru - First Aid System</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+:root {
+    --primary: #1b5e20;
+    --gold: #ffd700;
+    --danger: #c62828;
+    --bg: #f4f7f6;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    background: var(--bg);
+}
+
+.hidden { display: none !important; }
+
+/* LOGIN */
+#loginPage {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #1b5e20, #2e7d32);
+}
+
+.login-card {
+    background: white;
+    padding: 40px;
+    border-radius: 15px;
+    width: 350px;
+    text-align: center;
+}
+
+input, select {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+/* DASHBOARD */
+#dashPage {
+    display: flex;
+}
+
+/* SIDEBAR */
+.sidebar {
+    width: 250px;
+    background: var(--primary);
+    color: white;
+    height: 100vh;
+    position: fixed;
+}
+
+.sidebar h3 {
+    padding: 20px;
+    margin: 0;
+}
+
+.nav-item {
+    padding: 15px 20px;
+    cursor: pointer;
+}
+
+.nav-item:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+/* MAIN */
+.main {
+    margin-left: 250px;
+    padding: 30px;
+    width: 100%;
+}
+
+.card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+}
+
+/* TABLE */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th {
+    background: var(--primary);
+    color: white;
+    padding: 12px;
+}
+
+td {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+}
+
+/* BUTTONS */
+.btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.btn-green { background: var(--primary); color: white; }
+.btn-gold { background: var(--gold); }
+.btn-red { background: var(--danger); color: white; }
+
+/* MODAL */
+.modal {
+    position: fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background: rgba(0,0,0,0.5);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+
+.modal-content {
+    background:white;
+    padding:25px;
+    border-radius:10px;
+    width:300px;
+}
+</style>
 </head>
+
 <body>
 
+<!-- LOGIN -->
 <div id="loginPage">
     <div class="login-card">
-        <h2 style="color: var(--primary)">JIBWIS NGURU</h2>
-        <p>First Aid Group Login</p>
-        <input type="text" id="u" placeholder="Username">
-        <input type="password" id="p" placeholder="Password">
-        <button class="btn btn-green" style="width:100%" id="loginBtn" onclick="doLogin()">Login</button>
+        <h2>JIBWIS NGURU</h2>
+        <input id="u" placeholder="Username">
+        <input id="p" type="password" placeholder="Password">
+        <button class="btn btn-green" onclick="doLogin()">Login</button>
     </div>
 </div>
 
+<!-- DASHBOARD -->
 <div id="dashPage" class="hidden">
-    <div class="sidebar">
-        <div style="padding: 30px 25px; border-bottom: 1px solid rgba(255,255,255,0.1)">
-            <h3 style="margin:0">JIBWIS NGURU</h3>
-            <small id="roleText" style="color: var(--gold)"></small>
-        </div>
-        <div class="nav-item" onclick="showSection('recruits')">📋 Recruits</div>
-        <div id="adminLink" class="nav-item hidden" onclick="showSection('officers')">👨‍✈️ Manage Officers</div>
-        <div class="nav-item" onclick="location.reload()" style="margin-top: 50px; color: #ffab91;">🚪 Logout</div>
+
+<div class="sidebar">
+    <h3>JIBWIS</h3>
+    <div id="roleText"></div>
+    <div class="nav-item" onclick="showSection('recruits')">Recruits</div>
+    <div id="adminLink" class="nav-item hidden" onclick="showSection('officers')">Officers</div>
+</div>
+
+<div class="main">
+
+<!-- RECRUITS -->
+<div id="recruitsSection">
+    <h2>Recruits</h2>
+    <button class="btn btn-green" onclick="openModal('Recruit')">+ Add Recruit</button>
+
+    <div class="card">
+        <table>
+            <thead>
+                <tr><th>Name</th><th>Officer</th><th>Attendance</th><th>Action</th></tr>
+            </thead>
+            <tbody id="rBody"></tbody>
+        </table>
     </div>
+</div>
 
-    <div class="main">
-        <div id="recruitsSection">
-            <div style="display:flex; justify-content: space-between; align-items:center;">
-                <h2>Recruits Management</h2>
-                <button class="btn btn-green" onclick="add('Recruit')">+ Add Recruit</button>
-            </div>
-            <div class="card">
-                <table>
-                    <thead><tr><th>Name</th><th>Officer</th><th>Attendance</th><th>Action</th></tr></thead>
-                    <tbody id="rBody"></tbody>
-                </table>
-            </div>
+<!-- OFFICERS -->
+<div id="officersSection" class="hidden">
+    <h2>Officers</h2>
+    <button class="btn btn-green" onclick="openModal('Officer')">+ Add Officer</button>
+
+    <div class="card">
+        <table>
+            <thead>
+                <tr><th>Name</th><th>Username</th><th>Action</th></tr>
+            </thead>
+            <tbody id="oBody"></tbody>
+        </table>
+    </div>
+</div>
+
+</div>
+</div>
+
+<!-- MODAL -->
+<div id="modal" class="modal hidden">
+    <div class="modal-content">
+        <h3 id="modalTitle"></h3>
+        <input id="nameField" placeholder="Name">
+
+        <div id="officerFields" class="hidden">
+            <input id="userField" placeholder="Username">
+            <input id="passField" placeholder="Password">
         </div>
 
-        <div id="officersSection" class="hidden">
-            <div style="display:flex; justify-content: space-between; align-items:center;">
-                <h2>Training Officers</h2>
-                <button class="btn btn-green" onclick="add('Officer')">+ Add Officer</button>
-            </div>
-            <div class="card">
-                <table>
-                    <thead><tr><th>Name</th><th>Username</th><th>Action</th></tr></thead>
-                    <tbody id="oBody"></tbody>
-                </table>
-            </div>
-        </div>
+        <button class="btn btn-green" onclick="submitForm()">Save</button>
+        <button onclick="closeModal()">Cancel</button>
     </div>
 </div>
 
 <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbyMmxj09yTqmPgz4fpzY9qGGQx-sA0fLzg21wXPe1YBU86OVbt0jkXOqxuoNH25gIkk/exec";
-    let ME = "", ROLE = "";
-    const isWeekend = [0, 6].includes(new Date().getDay());
+const API_URL = "https://script.google.com/macros/s/AKfycbyMmxj09yTqmPgz4fpzY9qGGQx-sA0fLzg21wXPe1YBU86OVbt0jkXOqxuoNH25gIkk/exec";
 
-    async function apiCall(data) {
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            body: JSON.stringify(data)
-        });
-        return response.json();
-    }
+let ROLE="", ME="", currentType="";
 
-    async function doLogin() {
-        const u = document.getElementById('u').value;
-        const p = document.getElementById('p').value;
-        const btn = document.getElementById('loginBtn');
-        
-        btn.innerText = "Loading...";
-        btn.disabled = true;
+async function apiCall(data){
+    const res = await fetch(API_URL,{
+        method:'POST',
+        body: JSON.stringify(data)
+    });
+    return res.json();
+}
 
-        try {
-            const res = await apiCall({ action: "login", u, p });
-            if (res.success) {
-                ME = res.name; ROLE = res.role;
-                document.getElementById('loginPage').classList.add('hidden');
-                document.getElementById('dashPage').classList.remove('hidden');
-                document.getElementById('roleText').innerText = ROLE + " | " + ME;
-                if(ROLE === 'Admin') document.getElementById('adminLink').classList.remove('hidden');
-                loadData();
-            } else {
-                alert("Invalid Credentials");
-                btn.innerText = "Login";
-                btn.disabled = false;
-            }
-        } catch (e) {
-            alert("Error connecting to server. Make sure you deployed as 'Anyone'.");
-            btn.innerText = "Login";
-            btn.disabled = false;
+/* LOGIN */
+async function doLogin(){
+    let u = u.value, p = p.value;
+    let res = await apiCall({action:"login",u,p});
+    if(res.success){
+        ROLE=res.role; ME=res.name;
+        loginPage.classList.add('hidden');
+        dashPage.classList.remove('hidden');
+        roleText.innerText = ROLE+" | "+ME;
+
+        if(ROLE==="Admin"){
+            adminLink.classList.remove('hidden');
         }
-    }
 
-    async function loadData() {
-        const recruits = await apiCall({ action: "getRecruits", role: ROLE, user: ME });
-        let h = "";
-        recruits.forEach(r => {
-            h += `<tr>
-                <td><b>${r[1]}</b></td>
-                <td>${r[2]}</td>
-                <td>${r[3]}</td>
-                <td>
-                    ${isWeekend ? `<button class="btn btn-gold" onclick="mark('${r[0]}')">Present</button>` : '<small>Weekends Only</small>'}
-                    ${ROLE === 'Admin' ? `<button class="btn btn-red" onclick="del('Recruits','${r[0]}')">Del</button>` : ''}
-                </td>
-            </tr>`;
+        loadData();
+    } else alert("Invalid login");
+}
+
+/* LOAD DATA */
+async function loadData(){
+    let recruits = await apiCall({action:"getRecruits",role:ROLE,user:ME});
+
+    rBody.innerHTML = recruits.map(r=>`
+        <tr>
+            <td>${r[1]}</td>
+            <td>${r[2]}</td>
+            <td>${r[3]}</td>
+            <td>
+                <button onclick="mark('${r[0]}')">✔</button>
+                ${ROLE==="Admin"?`<button onclick="del('Recruits','${r[0]}')">❌</button>`:''}
+            </td>
+        </tr>
+    `).join("");
+
+    /* FIXED OFFICER LOADING */
+    if(ROLE==="Admin"){
+        let officers = await apiCall({action:"getOfficers"});
+        oBody.innerHTML = officers.map(o=>`
+            <tr>
+                <td>${o[1]}</td>
+                <td>${o[2]}</td>
+                <td><button onclick="del('Officers','${o[0]}')">Remove</button></td>
+            </tr>
+        `).join("");
+    }
+}
+
+/* MODAL */
+function openModal(type){
+    currentType = type;
+    modal.classList.remove('hidden');
+    modalTitle.innerText = "Add "+type;
+
+    officerFields.classList.toggle('hidden', type!=="Officer");
+}
+
+function closeModal(){
+    modal.classList.add('hidden');
+}
+
+/* SUBMIT */
+async function submitForm(){
+    let name = nameField.value;
+
+    if(currentType==="Recruit"){
+        await apiCall({action:"addRecruit",name,user:ME});
+    } else {
+        await apiCall({
+            action:"addOfficer",
+            name,
+            u:userField.value,
+            p:passField.value
         });
-        document.getElementById('rBody').innerHTML = h || "<tr><td colspan='4'>No records found.</td></tr>";
-
-        if (ROLE === 'Admin') {
-            const officers = await apiCall({ action: "getOfficers" });
-            let oh = "";
-            officers.forEach(o => {
-                oh += `<tr><td>${o[1]}</td><td>${o[2]}</td><td><button class="btn btn-red" onclick="del('Officers','${o[0]}')">Remove</button></td></tr>`;
-            });
-            document.getElementById('oBody').innerHTML = oh;
-        }
     }
 
-    async function mark(id) {
-        await apiCall({ action: "mark", id, user: ME });
+    closeModal();
+    loadData();
+}
+
+/* OTHER */
+function showSection(s){
+    recruitsSection.classList.toggle('hidden', s!=="recruits");
+    officersSection.classList.toggle('hidden', s!=="officers");
+}
+
+async function mark(id){
+    await apiCall({action:"mark",id,user:ME});
+    loadData();
+}
+
+async function del(type,id){
+    if(confirm("Delete?")){
+        await apiCall({action:"delete",type,id});
         loadData();
     }
-
-    async function del(type, id) {
-        if(confirm("Delete this record permanently?")) {
-            await apiCall({ action: "delete", type, id });
-            loadData();
-        }
-    }
-
-    function showSection(s) {
-        document.getElementById('recruitsSection').classList.toggle('hidden', s !== 'recruits');
-        document.getElementById('officersSection').classList.toggle('hidden', s !== 'officers');
-    }
-
-    async function add(type) {
-        let n = prompt("Enter Name:");
-        if(!n) return;
-        if(type === 'Recruit') {
-            await apiCall({ action: "addRecruit", name: n, user: ME });
-        } else {
-            let u = prompt("Username:"), p = prompt("Password:");
-            await apiCall({ action: "addOfficer", name: n, u, p });
-        }
-        loadData();
-    }
+}
 </script>
+
 </body>
-  </html>
-  
+    </html>
