@@ -1,28 +1,21 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>First Aid System</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>JIBWIS System</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
 
 <style>
-:root{
-    --bg:#0f0f1a;
-    --card:#1a1a2e;
-    --accent:#8e2de2;
-    --accent2:#4a00e0;
-    --text:#fff;
-    --muted:#aaa;
-}
-
-*{margin:0;padding:0;box-sizing:border-box;font-family:Poppins;}
-
 body{
-    background: radial-gradient(circle at top,#1a1a40,#0f0f1a);
-    color:var(--text);
+    margin:0;
+    font-family:Poppins;
+    background:#0f0f1a;
+    color:white;
 }
+
+.hidden{display:none}
 
 /* LOGIN */
 #loginPage{
@@ -32,144 +25,64 @@ body{
     align-items:center;
 }
 
-.login-box{
-    background:var(--card);
-    padding:35px;
-    border-radius:12px;
-    width:320px;
+.box{
+    background:#1a1a2e;
+    padding:30px;
+    border-radius:10px;
+    width:300px;
 }
 
 input{
     width:100%;
-    padding:12px;
+    padding:10px;
     margin:10px 0;
-    border:none;
-    border-radius:8px;
-    background:#111;
-    color:#fff;
 }
 
-.btn{
-    width:100%;
-    padding:12px;
-    border:none;
-    border-radius:8px;
-    background:linear-gradient(90deg,var(--accent),var(--accent2));
-    color:white;
-    cursor:pointer;
-}
-
-/* DASHBOARD */
+/* DASH */
 #dash{
     display:flex;
 }
 
 .sidebar{
-    width:240px;
-    height:100vh;
+    width:220px;
     background:#111;
+    height:100vh;
     padding:20px;
 }
 
 .nav{
-    padding:12px;
-    margin-top:10px;
+    padding:10px;
     cursor:pointer;
-    border-radius:8px;
-}
-
-.nav:hover{
-    background:rgba(255,255,255,0.05);
 }
 
 .main{
     flex:1;
-    padding:25px;
-}
-
-/* CARD */
-.card{
-    background:var(--card);
     padding:20px;
-    border-radius:12px;
-    margin-top:20px;
 }
 
-/* TABLE */
+.card{
+    background:#1a1a2e;
+    padding:20px;
+    margin-top:20px;
+    border-radius:10px;
+}
+
 table{
     width:100%;
     border-collapse:collapse;
 }
 
 th,td{
-    padding:12px;
-    text-align:left;
+    padding:10px;
+    border-bottom:1px solid #333;
 }
 
-th{color:var(--muted);}
-
-/* MODAL */
-.modal{
-    position:fixed;
-    top:0;left:0;
-    width:100%;
-    height:100%;
-    background:rgba(0,0,0,0.7);
-    display:flex;
-    justify-content:center;
-    align-items:center;
-}
-
-.modal-box{
-    background:var(--card);
-    padding:25px;
-    border-radius:10px;
-    width:300px;
-}
-
-/* TOAST */
-.toast{
-    position:fixed;
-    top:20px;
-    right:20px;
-    background:#111;
-    padding:12px 18px;
-    border-radius:8px;
-    z-index:999;
-}
-
-/* LOADER */
-.loader{
-    position:fixed;
-    top:0;left:0;
-    width:100%;
-    height:100%;
-    background:rgba(0,0,0,0.8);
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    z-index:1000;
-}
-
-.progress{
-    width:260px;
-    height:8px;
-    background:#222;
-    border-radius:10px;
-    overflow:hidden;
-}
-
-#bar{
-    height:100%;
-    width:0%;
-    background:linear-gradient(90deg,var(--accent),var(--accent2));
-}
-
-.hidden{display:none}
-
-/* MOBILE */
-@media(max-width:768px){
-    .sidebar{display:none;}
+button{
+    padding:8px 12px;
+    background:#8e2de2;
+    color:white;
+    border:none;
+    cursor:pointer;
 }
 </style>
 </head>
@@ -178,240 +91,119 @@ th{color:var(--muted);}
 
 <!-- LOGIN -->
 <div id="loginPage">
-    <div class="login-box">
-        <h2>Login</h2>
-        <input id="u" placeholder="Username">
-        <input id="p" type="password" placeholder="Password">
-        <button class="btn" onclick="login()">Login</button>
-    </div>
+  <div class="box">
+    <h2>Login</h2>
+    <input id="u" placeholder="Username">
+    <input id="p" type="password" placeholder="Password">
+    <button onclick="login()">Login</button>
+  </div>
 </div>
 
 <!-- DASHBOARD -->
 <div id="dash" class="hidden">
 
 <div class="sidebar">
-    <h3 id="userInfo"></h3>
-    <div class="nav" onclick="show('r')">Recruits</div>
-    <div class="nav hidden" id="adminNav" onclick="show('o')">Officers</div>
+  <h3 id="info"></h3>
+  <div class="nav" onclick="show('r')">Recruits</div>
+  <div class="nav hidden" id="adminNav" onclick="show('o')">Officers</div>
 </div>
 
 <div class="main">
 
 <div id="rSec">
-    <h2>Recruits</h2>
-    <button class="btn" onclick="openModal('Recruit')">+ Add Recruit</button>
+<h2>Recruits</h2>
+<button onclick="openModal()">Add</button>
 
-    <div class="card">
-        <table>
-            <thead>
-                <tr><th>Name</th><th>Officer</th><th>Attendance</th></tr>
-            </thead>
-            <tbody id="rBody"></tbody>
-        </table>
-    </div>
+<div class="card">
+<table>
+<thead><tr><th>Name</th><th>Officer</th><th>Attendance</th></tr></thead>
+<tbody id="rBody"></tbody>
+</table>
+</div>
 </div>
 
 <div id="oSec" class="hidden">
-    <h2>Officers</h2>
-    <button class="btn" onclick="openModal('Officer')">+ Add Officer</button>
+<h2>Officers</h2>
 
-    <div class="card">
-        <table>
-            <thead>
-                <tr><th>Name</th><th>Username</th></tr>
-            </thead>
-            <tbody id="oBody"></tbody>
-        </table>
-    </div>
-</div>
-
+<div class="card">
+<table>
+<thead><tr><th>Name</th><th>Username</th></tr></thead>
+<tbody id="oBody"></tbody>
+</table>
 </div>
 </div>
 
-<!-- MODAL -->
-<div id="modal" class="modal hidden">
-    <div class="modal-box">
-        <h3 id="title"></h3>
-        <input id="name" placeholder="Name">
-
-        <div id="extra" class="hidden">
-            <input id="user" placeholder="Username">
-            <input id="pass" placeholder="Password">
-        </div>
-
-        <button class="btn" onclick="save()">Save</button>
-    </div>
 </div>
-
-<!-- TOAST -->
-<div id="toast" class="toast hidden"></div>
-
-<!-- LOADER -->
-<div id="loader" class="loader hidden">
-    <div>
-        <p>Loading...</p>
-        <div class="progress">
-            <div id="bar"></div>
-        </div>
-    </div>
 </div>
 
 <script>
-const API="https://script.google.com/macros/s/AKfycby-gZscjPr6vlFKWc3qXJ6_gubGMexYFl40DVKmJTU-A80R7mmLFkpDW0heHVuYda5O/exec";
+const API="YOUR_URL_HERE";
 
-let ROLE="",ME="",TYPE="";
-
-/* FIXED ELEMENTS */
-const toastDiv=document.getElementById("toast");
-const loader=document.getElementById("loader");
-const bar=document.getElementById("bar");
-
-/* TOAST */
-function showToast(msg){
-    toastDiv.innerText=msg;
-    toastDiv.classList.remove("hidden");
-    setTimeout(()=>toastDiv.classList.add("hidden"),3000);
-}
-
-/* LOADER */
-function startLoader(){
-    loader.classList.remove("hidden");
-    let w=0;
-    return new Promise(res=>{
-        let i=setInterval(()=>{
-            w+=5;
-            bar.style.width=w+"%";
-            if(w>=100){
-                clearInterval(i);
-                setTimeout(res,200);
-            }
-        },70);
-    });
-}
-
-function stopLoader(){
-    loader.classList.add("hidden");
-    bar.style.width="0%";
-}
+let ROLE="",ME="";
 
 /* LOGIN */
 async function login(){
-    let u=document.getElementById("u").value.trim();
-    let p=document.getElementById("p").value.trim();
+let u=document.getElementById("u").value;
+let p=document.getElementById("p").value;
 
-    if(!u||!p){
-        showToast("Enter login details");
-        return;
-    }
+let r=await fetch(API,{
+method:"POST",
+body:JSON.stringify({action:"login",username:u,password:p})
+});
 
-    try{
-        let load=startLoader();
+let d=await r.json();
 
-        let res=await fetch(API,{
-            method:"POST",
-            body:JSON.stringify({action:"login",username:u,password:p})
-        });
+if(d.success){
+ROLE=d.role;
+ME=d.username||d.name;
 
-        let data=await res.json();
-        await load;
+loginPage.classList.add("hidden");
+dash.classList.remove("hidden");
 
-        stopLoader();
+info.innerText=ROLE+" | "+ME;
 
-        if(data.success){
-            showToast("Login successful");
+if(ROLE==="Admin") adminNav.classList.remove("hidden");
 
-            ROLE=data.role;
-            ME=data.name;
-
-            setTimeout(()=>{
-                loginPage.classList.add("hidden");
-                dash.classList.remove("hidden");
-
-                userInfo.innerText=ROLE+" | "+ME;
-
-                if(ROLE==="Admin") adminNav.classList.remove("hidden");
-
-                loadData();
-            },500);
-
-        }else{
-            showToast("Invalid login");
-        }
-
-    }catch(e){
-        stopLoader();
-        showToast("Server error");
-    }
+load();
+}else{
+alert("Invalid login");
+}
 }
 
 /* LOAD */
-async function loadData(){
-    let r=await fetch(API,{
-        method:"POST",
-        body:JSON.stringify({action:"getRecruits",role:ROLE,user:ME})
-    });
+async function load(){
 
-    let d=await r.json();
+let r=await fetch(API,{
+method:"POST",
+body:JSON.stringify({action:"getRecruits",role:ROLE,user:ME})
+});
 
-    if(d.success){
-        rBody.innerHTML=d.data.map(x=>`
-            <tr><td>${x.name}</td><td>${x.officer}</td><td>${x.attendance}</td></tr>
-        `).join("");
-    }
+let d=await r.json();
 
-    if(ROLE==="Admin"){
-        let o=await fetch(API,{
-            method:"POST",
-            body:JSON.stringify({action:"getOfficers"})
-        });
+rBody.innerHTML=d.data.map(x=>`
+<tr><td>${x.name}</td><td>${x.officer}</td><td>${x.attendance}</td></tr>
+`).join("");
 
-        let od=await o.json();
+if(ROLE==="Admin"){
+let o=await fetch(API,{
+method:"POST",
+body:JSON.stringify({action:"getOfficers"})
+});
 
-        oBody.innerHTML=od.data.map(x=>`
-            <tr><td>${x.name}</td><td>${x.username}</td></tr>
-        `).join("");
-    }
+let od=await o.json();
+
+oBody.innerHTML=od.data.map(x=>`
+<tr><td>${x.name}</td><td>${x.username}</td></tr>
+`).join("");
 }
-
-/* MODAL */
-function openModal(t){
-    TYPE=t;
-    modal.classList.remove("hidden");
-    title.innerText="Add "+t;
-    extra.classList.toggle("hidden",t!=="Officer");
-}
-
-/* SAVE */
-async function save(){
-    let name=document.getElementById("name").value;
-
-    if(TYPE==="Recruit"){
-        await fetch(API,{
-            method:"POST",
-            body:JSON.stringify({action:"addRecruit",name,officer:ME})
-        });
-    }else{
-        await fetch(API,{
-            method:"POST",
-            body:JSON.stringify({
-                action:"addOfficer",
-                name,
-                username:user.value,
-                password:pass.value
-            })
-        });
-    }
-
-    modal.classList.add("hidden");
-    loadData();
 }
 
 /* NAV */
 function show(s){
-    rSec.classList.toggle("hidden",s!=="r");
-    oSec.classList.toggle("hidden",s!=="o");
+rSec.classList.toggle("hidden",s!=="r");
+oSec.classList.toggle("hidden",s!=="o");
 }
 </script>
 
 </body>
-</html>
+    </html>
