@@ -1,157 +1,191 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>System</title>
-
-<style>
-body{font-family:Arial;background:#0f0f1a;color:white;margin:0}
-.hidden{display:none}
-
-#login{
-  height:100vh;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-}
-
-.box{
-  background:#1a1a2e;
-  padding:20px;
-  border-radius:10px;
-  width:280px;
-}
-
-input{
-  width:100%;
-  padding:10px;
-  margin:10px 0;
-}
-
-button{
-  width:100%;
-  padding:10px;
-  background:#8e2de2;
-  border:none;
-  color:white;
-  cursor:pointer;
-}
-
-#dash{
-  display:flex;
-}
-
-.sidebar{
-  width:200px;
-  background:#111;
-  height:100vh;
-  padding:10px;
-}
-
-.main{
-  flex:1;
-  padding:20px;
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>JIBWIS Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .tab-active { color: #059669; border-top: 2px solid #059669; }
+    </style>
 </head>
+<body class="bg-slate-50 min-h-screen">
 
-<body>
+    <div id="loader" class="fixed inset-0 bg-white z-[100] flex items-center justify-center">
+        <div class="text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto"></div>
+            <p class="mt-4 text-slate-500 font-medium">Authenticating...</p>
+        </div>
+    </div>
 
-<!-- LOGIN -->
-<div id="login">
-  <div class="box">
-    <h3>Login</h3>
-    <input id="u" placeholder="username">
-    <input id="p" type="password" placeholder="password">
-    <button onclick="login()">Login</button>
-    <p id="msg"></p>
-  </div>
-</div>
+    <div id="app" class="hidden pb-24">
+        
+        <header id="header-bg" class="p-6 text-white transition-colors duration-500">
+            <div class="max-w-md mx-auto flex justify-between items-center">
+                <div>
+                    <h1 id="portal-title" class="text-xl font-extrabold tracking-tight">JIBWIS PORTAL</h1>
+                    <p id="user-email" class="text-[10px] opacity-80 uppercase font-bold tracking-widest"></p>
+                </div>
+                <div id="role-badge" class="px-2 py-1 rounded text-[10px] font-black border border-white/30 uppercase"></div>
+            </div>
+        </header>
 
-<!-- DASH -->
-<div id="dash" class="hidden">
+        <main class="max-w-md mx-auto p-4 space-y-4">
+            
+            <section id="view-mark" class="view hidden space-y-4">
+                <div id="weekend-warning" class="hidden bg-amber-100 p-4 rounded-2xl text-amber-800 text-sm font-medium flex items-center">
+                    <i data-lucide="lock" class="w-4 h-4 mr-2"></i> Only Saturday/Sunday marking allowed.
+                </div>
+                
+                <div class="bg-white rounded-3xl shadow-xl p-8 text-center border border-slate-100">
+                    <h2 class="text-slate-400 text-[10px] font-black tracking-[0.2em] uppercase mb-8">Active Recruit</h2>
+                    <div id="name-display" class="text-3xl font-black text-slate-800 h-24 flex items-center justify-center">--</div>
+                    <div class="grid grid-cols-2 gap-4 mt-8">
+                        <button onclick="submit(1)" class="bg-emerald-600 text-white py-5 rounded-2xl font-bold shadow-lg shadow-emerald-100 active:scale-95 transition-all">PRESENT</button>
+                        <button onclick="submit(0)" class="bg-slate-800 text-white py-5 rounded-2xl font-bold active:scale-95 transition-all">ABSENT</button>
+                    </div>
+                </div>
+            </section>
 
-<div class="sidebar">
-  <h4 id="info"></h4>
-  <div onclick="load()">Recruits</div>
-</div>
+            <section id="view-list" class="view hidden space-y-4">
+                <div class="bg-white rounded-3xl p-6 shadow-sm">
+                    <h3 class="font-black text-slate-800 text-sm mb-6 uppercase tracking-widest">Attendance Record</h3>
+                    <div id="stats-container" class="space-y-4 text-sm text-slate-600"></div>
+                </div>
+            </section>
 
-<div class="main">
-  <h3>Dashboard</h3>
-  <div id="out"></div>
-</div>
+            <section id="view-central" class="view hidden space-y-4">
+                <div class="bg-slate-900 rounded-3xl p-6 text-white shadow-2xl">
+                    <h3 class="font-bold mb-4">Assign New Admin</h3>
+                    <div class="flex gap-2">
+                        <input type="email" id="new-admin-email" placeholder="Gmail Address" class="flex-1 bg-slate-800 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        <button onclick="addAdmin()" class="bg-emerald-500 p-3 rounded-xl"><i data-lucide="plus"></i></button>
+                    </div>
+                </div>
+                <div class="bg-white rounded-3xl p-6 shadow-sm">
+                    <h3 class="font-black text-slate-800 text-sm mb-4 uppercase tracking-widest text-center">Staff Directory</h3>
+                    <div id="admin-directory" class="divide-y text-sm"></div>
+                </div>
+            </section>
 
-</div>
+        </main>
+
+        <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-6 py-3 flex justify-around items-center z-50">
+            <button onclick="switchView('mark')" id="nav-mark" class="flex flex-col items-center text-slate-400">
+                <i data-lucide="edit-3" class="w-5 h-5"></i>
+                <span class="text-[9px] font-bold mt-1">MARK</span>
+            </button>
+            <button onclick="switchView('list')" id="nav-list" class="flex flex-col items-center text-slate-400">
+                <i data-lucide="layout-list" class="w-5 h-5"></i>
+                <span class="text-[9px] font-bold mt-1">RECORDS</span>
+            </button>
+            <button onclick="switchView('central')" id="nav-central" class="hidden flex flex-col items-center text-slate-400">
+                <i data-lucide="shield-check" class="w-5 h-5"></i>
+                <span class="text-[9px] font-bold mt-1">ADMIN</span>
+            </button>
+        </nav>
+    </div>
 
 <script>
-const API="https://script.google.com/macros/s/AKfycbyNygJFW5OmJLMKxTEDzTTQDFmEYCcw4MMpW6qYpAB5OAnpFUxe2i28JqkUZs5tcF8/exec";
+    const SCRIPT_URL = 'YOUR_APPSCRIPT_URL_HERE'; // PASTE YOUR URL HERE
+    let state = { role: '', recruits: [], index: 0, email: '' };
 
-let ROLE="",USER="";
+    async function init() {
+        lucide.createIcons();
+        const res = await fetch(`${SCRIPT_URL}?mode=fetch`);
+        const data = await res.json();
 
-/* SAFE FETCH */
-async function post(data){
-  try{
-    let r=await fetch(API,{
-      method:"POST",
-      body:JSON.stringify(data)
-    });
+        if(data.error) {
+            document.body.innerHTML = `<div class="p-10 text-center font-bold text-slate-400">${data.error}<br>${data.email}</div>`;
+            return;
+        }
 
-    let text=await r.text();
-    return JSON.parse(text);
-  }catch(e){
-    console.log(e);
-    return {success:false};
-  }
-}
+        state = { ...state, ...data };
+        document.getElementById('user-email').innerText = state.email;
+        document.getElementById('role-badge').innerText = state.role;
+        document.getElementById('loader').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
 
-/* LOGIN */
-async function login(){
+        if(state.role === 'SUPER_ADMIN') {
+            document.getElementById('header-bg').className = 'bg-slate-900 p-6 text-white shadow-lg';
+            document.getElementById('nav-central').classList.remove('hidden');
+            switchView('central');
+        } else {
+            document.getElementById('header-bg').className = 'bg-emerald-600 p-6 text-white shadow-lg';
+            switchView('mark');
+        }
+    }
 
-let u=document.getElementById("u").value;
-let p=document.getElementById("p").value;
+    function switchView(view) {
+        document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+        document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active'));
+        
+        document.getElementById(`view-${view}`).classList.remove('hidden');
+        document.getElementById(`nav-${view}`).classList.add('tab-active');
 
-let res=await post({
-  action:"login",
-  username:u,
-  password:p
-});
+        if(view === 'mark') renderMarking();
+        if(view === 'list') renderStats();
+        if(view === 'central') renderAdminList();
+    }
 
-if(res.success){
+    function renderMarking() {
+        const isWeekend = [0, 6].includes(new Date().getDay());
+        if(!isWeekend) document.getElementById('weekend-warning').classList.remove('hidden');
+        
+        const display = document.getElementById('name-display');
+        if(state.index < state.recruits.length) {
+            display.innerText = state.recruits[state.index];
+        } else {
+            display.innerHTML = '<div class="text-emerald-500 text-sm font-bold uppercase tracking-widest">Session Complete</div>';
+        }
+    }
 
-ROLE=res.role;
-USER=res.username || res.name;
+    async function submit(status) {
+        const name = state.recruits[state.index];
+        state.index++;
+        renderMarking();
 
-login.style.display="none";
-dash.classList.remove("hidden");
+        await fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ name, status })
+        });
+    }
 
-info.innerText=ROLE+" | "+USER;
+    async function renderStats() {
+        const res = await fetch(`${SCRIPT_URL}?mode=stats`);
+        const stats = await res.json();
+        document.getElementById('stats-container').innerHTML = stats.map(s => `
+            <div class="flex justify-between items-center">
+                <span class="font-semibold text-slate-700">${s.name}</span>
+                <span class="font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">${s.percentage}%</span>
+            </div>
+        `).join('');
+    }
 
-load();
+    async function renderAdminList() {
+        const res = await fetch(`${SCRIPT_URL}?mode=manage_admins`);
+        const list = await res.json();
+        document.getElementById('admin-directory').innerHTML = list.map(a => `
+            <div class="py-3 flex justify-between">
+                <span class="text-slate-600">${a[0]}</span>
+                <span class="text-[10px] font-bold text-slate-400 uppercase">${a[1]}</span>
+            </div>
+        `).join('');
+        lucide.createIcons();
+    }
 
-}else{
-msg.innerText="Invalid login";
-}
-}
+    async function addAdmin() {
+        const email = document.getElementById('new-admin-email').value;
+        if(!email) return;
+        await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'add_admin', newEmail: email }) });
+        alert("Admin Assigned");
+        renderAdminList();
+    }
 
-/* LOAD RECRUITS */
-async function load(){
-
-let res=await post({
-  action:"getRecruits",
-  role:ROLE,
-  user:USER
-});
-
-if(res.success){
-
-out.innerHTML=res.data.map(r=>
-  `<div>${r.name} - ${r.officer}</div>`
-).join("");
-
-}
-}
+    init();
 </script>
-
 </body>
 </html>
