@@ -2,6 +2,174 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>JIBWIS Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body class="bg-slate-50 min-h-screen pb-20">
+
+    <div id="login-view" class="fixed inset-0 bg-emerald-950 z-[1000] flex items-center justify-center p-6">
+        <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-sm shadow-2xl">
+            <h2 class="text-3xl font-black text-slate-800 mb-2">Welcome</h2>
+            <p class="text-slate-400 text-sm mb-8">Sign in to JIBWIS Attendance</p>
+            <input type="email" id="email" placeholder="Email" class="w-full bg-slate-100 p-4 rounded-2xl mb-4 outline-none focus:ring-2 focus:ring-emerald-500">
+            <input type="password" id="pass" placeholder="Password" class="w-full bg-slate-100 p-4 rounded-2xl mb-6 outline-none focus:ring-2 focus:ring-emerald-500">
+            <button onclick="doLogin()" id="lbtn" class="w-full bg-emerald-600 text-white py-4 rounded-2xl font-bold shadow-lg active:scale-95 transition-all">Login</button>
+        </div>
+    </div>
+
+    <div id="app" class="hidden">
+        <header class="bg-white border-b p-4 sticky top-0 z-50 flex justify-between items-center">
+            <h1 class="font-black text-emerald-700 tracking-tighter text-xl uppercase">Jibwis Pro</h1>
+            <button onclick="location.reload()" class="bg-slate-100 p-2 rounded-full"><i data-lucide="log-out" class="w-4 h-4"></i></button>
+        </header>
+
+        <main class="max-w-xl mx-auto p-4 space-y-6">
+            <div id="super-tools" class="hidden flex gap-2">
+                <input type="text" id="srch" oninput="runSearch()" placeholder="Search..." class="flex-1 p-3 rounded-xl border-none shadow-sm focus:ring-2 focus:ring-emerald-500">
+                <button onclick="runSort()" class="bg-white px-3 rounded-xl shadow-sm"><i data-lucide="arrow-up-az"></i></button>
+                <button onclick="pdfAll()" class="bg-emerald-600 text-white px-4 rounded-xl font-bold text-xs uppercase">Report</button>
+            </div>
+
+            <div id="main-content"></div>
+        </main>
+
+        <nav id="navbar" class="fixed bottom-0 left-0 right-0 bg-white border-t p-3 flex justify-around shadow-2xl z-50"></nav>
+    </div>
+
+<script>
+  const URL = 'https://script.google.com/macros/s/AKfycbyRTlWkOXJo84sNkUKsOBUsaWnSCRTRbKpk7hUh8rc1ZTMKsABsAI-aRrdKtWo530JdEQ/exec';
+    
+    let user = null;
+    let cache = [];
+    let asc = true;
+
+    async function doLogin() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('pass').value;
+        const res = await fetch(URL, { method: 'POST', body: JSON.stringify({ action: 'login', email, password })});
+        const data = await res.json();
+        
+        if (data.success) {
+            user = data;
+            document.getElementById('login-view').remove();
+            document.getElementById('app').classList.remove('hidden');
+            renderNav();
+            user.role === 'SUPER_ADMIN' ? goMaster() : goMark();
+        } else alert("Error: Check credentials");
+    }
+
+    function renderNav() {
+        const nav = document.getElementById('navbar');
+        if (user.role === 'SUPER_ADMIN') {
+            document.getElementById('super-tools').classList.remove('hidden');
+            nav.innerHTML = `
+                <button onclick="goMaster()" class="flex flex-col items-center text-emerald-600"><i data-lucide="users"></i><span class="text-[9px] font-bold">RECRUITS</span></button>
+                <button onclick="goAdmins()" class="flex flex-col items-center text-slate-400"><i data-lucide="shield"></i><span class="text-[9px] font-bold">STAFF</span></button>
+            `;
+        } else {
+            nav.innerHTML = `
+                <button onclick="goMark()" class="flex flex-col items-center text-emerald-600"><i data-lucide="check-circle-2"></i><span class="text-[9px] font-bold">MARK</span></button>
+                <button onclick="pdfSelf()" class="flex flex-col items-center text-slate-400"><i data-lucide="file-down"></i><span class="text-[9px] font-bold">PDF</span></button>
+            `;
+        }
+        lucide.createIcons();
+    }
+
+    // --- ADMIN: MARKING (Persistence Locked) ---
+    function goMark() {
+        const day = new Date().getDay();
+        const content = document.getElementById('main-content');
+        if (day !== 0 && day !== 6) { 
+            content.innerHTML = `<div class="p-10 text-center text-slate-400">Locked. Access on Saturday/Sunday.</div>`; 
+            return; 
+        }
+
+        let idx = 0;
+        const render = () => {
+            if (idx >= user.recruits.length) {
+                content.innerHTML = `<div class="p-12 text-center bg-white rounded-3xl shadow-xl border-t-8 border-emerald-500"><h2 class="text-xl font-black text-emerald-700">Daily Task Complete</h2><p class="text-slate-400 text-sm mt-2">All recruits processed.</p></div>`;
+                return;
+            }
+            content.innerHTML = `
+                <div class="bg-white p-10 rounded-[3rem] shadow-2xl text-center border-t-8 border-emerald-600">
+                    <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-6">Process Recruit</p>
+                    <h2 class="text-4xl font-black text-slate-800 mb-10 tracking-tight">${user.recruits[idx]}</h2>
+                    <div class="grid grid-cols-2 gap-4">
+                        <button onclick="save(1)" class="bg-emerald-600 text-white py-6 rounded-[2rem] font-black shadow-lg">PRESENT</button>
+                        <button onclick="save(0)" class="bg-slate-900 text-white py-6 rounded-[2rem] font-black">ABSENT</button>
+                    </div>
+                </div>`;
+        };
+
+        window.save = async (s) => {
+            const name = user.recruits[idx];
+            idx++; render();
+            await fetch(URL, { method: 'POST', body: JSON.stringify({ action: 'save_attendance', email: user.email, name, status: s })});
+        };
+        render();
+    }
+
+    // --- SUPER ADMIN: VIEWS ---
+    async function goMaster() {
+        const res = await fetch(URL, { method: 'POST', body: JSON.stringify({ action: 'get_master_stats' })});
+        cache = await res.json();
+        drawTable(cache);
+    }
+
+    function drawTable(data) {
+        document.getElementById('main-content').innerHTML = `
+            <div class="bg-white rounded-3xl shadow-sm overflow-hidden border">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase">
+                        <tr><th class="p-4">Recruit</th><th class="p-4">Admin</th><th class="p-4 text-right">Att%</th></tr>
+                    </thead>
+                    <tbody class="divide-y">${data.map(r => `<tr><td class="p-4 font-bold uppercase">${r.name}</td><td class="p-4 text-xs text-slate-400">${r.admin}</td><td class="p-4 text-right font-black text-emerald-600">${r.percent}%</td></tr>`).join('')}</tbody>
+                </table>
+            </div>`;
+    }
+
+    // Search & Sort
+    function runSearch() {
+        const q = document.getElementById('srch').value.toLowerCase();
+        drawTable(cache.filter(r => r.name.toLowerCase().includes(q) || r.admin.toLowerCase().includes(q)));
+    }
+    function runSort() {
+        cache.sort((a,b) => asc ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name));
+        asc = !asc; drawTable(cache);
+    }
+
+    // PDF Reports
+    function pdfAll() {
+        const doc = new jspdf.jsPDF();
+        doc.text("JIBWIS GENERAL REPORT", 14, 15);
+        doc.autoTable({ head: [['Recruit', 'Admin', 'Att %']], body: cache.map(r => [r.name, r.admin, r.percent+'%']), startY: 20 });
+        doc.save("General_Report.pdf");
+    }
+
+    async function pdfSelf() {
+        const res = await fetch(URL, { method: 'POST', body: JSON.stringify({ action: 'get_master_stats' })});
+        const data = (await res.json()).filter(r => r.admin === user.email);
+        const doc = new jspdf.jsPDF();
+        doc.text("MY RECRUIT REPORT", 14, 15);
+        doc.autoTable({ head: [['Recruit', 'Att %']], body: data.map(r => [r.name, r.percent+'%']), startY: 20 });
+        doc.save("My_Report.pdf");
+    }
+
+    lucide.createIcons();
+</script>
+</body>
+</html>
+
+
+<!--
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JIBWIS Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -137,4 +305,4 @@
     lucide.createIcons();
 </script>
 </body>
-</html>
+</html>-->
