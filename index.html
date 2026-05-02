@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!--<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -237,4 +237,185 @@
 </script>
 </body>
     </html>
-    
+    -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JIBWIS Portal v3</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body class="bg-slate-50 min-h-screen pb-24">
+
+    <div id="login-view" class="fixed inset-0 bg-emerald-950 z-[1000] flex items-center justify-center p-6">
+        <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-sm">
+            <h2 class="text-2xl font-black mb-6">JIBWIS Login</h2>
+            <input type="email" id="email" placeholder="Email" class="w-full bg-slate-100 p-4 rounded-2xl mb-4 outline-none">
+            <input type="password" id="pass" placeholder="Password" class="w-full bg-slate-100 p-4 rounded-2xl mb-6 outline-none">
+            <button onclick="doLogin()" class="w-full bg-emerald-600 text-white py-4 rounded-2xl font-bold">Login</button>
+        </div>
+    </div>
+
+    <div id="app" class="hidden">
+        <header class="bg-white border-b p-4 sticky top-0 z-50 flex justify-between items-center">
+            <h1 class="font-black text-emerald-700">JIBWIS</h1>
+            <button onclick="location.reload()" class="bg-slate-100 p-2 rounded-full"><i data-lucide="log-out" class="w-4 h-4"></i></button>
+        </header>
+
+        <main class="max-w-xl mx-auto p-4 space-y-6">
+            <div id="super-tools" class="hidden flex gap-2">
+                <input type="text" id="srch" oninput="runSearch()" placeholder="Search..." class="flex-1 p-3 rounded-xl border shadow-sm outline-none">
+                <button onclick="pdfAll()" class="bg-emerald-600 text-white px-4 rounded-xl font-bold text-xs uppercase">Export PDF</button>
+            </div>
+            <div id="main-content"></div>
+        </main>
+
+        <nav id="navbar" class="fixed bottom-0 left-0 right-0 bg-white border-t p-3 flex justify-around shadow-2xl"></nav>
+    </div>
+
+<script>
+    const URL = 'https://script.google.com/macros/s/AKfycbyPbj9dH95W5vvDKBECJVkuKWnbGdCuNvO05E3zT-SCgaEIWcopyXA2HK9Npdyhx2a34A/exec'; 
+    let user = null;
+    let cache = [];
+
+    async function doLogin() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('pass').value;
+        const res = await fetch(URL, { method: 'POST', body: JSON.stringify({ action: 'login', email, password })});
+        const data = await res.json();
+        if (data.success) {
+            user = data;
+            document.getElementById('login-view').remove();
+            document.getElementById('app').classList.remove('hidden');
+            renderNav();
+            user.role === 'SUPER_ADMIN' ? goMaster() : goMark();
+        } else alert("Error");
+    }
+
+    function renderNav() {
+        const nav = document.getElementById('navbar');
+        if (user.role === 'SUPER_ADMIN') {
+            document.getElementById('super-tools').classList.remove('hidden');
+            nav.innerHTML = `
+                <button onclick="goMaster()" class="flex flex-col items-center"><i data-lucide="users"></i><span class="text-[9px]">RECORDS</span></button>
+                <button onclick="goAdmins()" class="flex flex-col items-center"><i data-lucide="shield"></i><span class="text-[9px]">STAFF</span></button>
+            `;
+        } else {
+            nav.innerHTML = `
+                <button onclick="goMark()" class="flex flex-col items-center"><i data-lucide="edit-3"></i><span class="text-[9px]">MARK</span></button>
+                <button onclick="goEditAttendance()" class="flex flex-col items-center"><i data-lucide="refresh-cw"></i><span class="text-[9px]">EDIT TODAY</span></button>
+            `;
+        }
+        lucide.createIcons();
+    }
+
+    // --- ADMIN: MARKING ---
+    function goMark() {
+        const day = new Date().getDay();
+        const content = document.getElementById('main-content');
+        if (day !== 0 && day !== 6) { content.innerHTML = `<p class="p-10 text-center">Locked. Return on Sat/Sun.</p>`; return; }
+        
+        let idx = 0;
+        const draw = () => {
+            if (idx >= user.recruits.length) { content.innerHTML = `<h2 class="text-center font-bold p-10">All marked!</h2>`; return; }
+            content.innerHTML = `
+                <div class="bg-white p-10 rounded-[3rem] shadow-xl text-center">
+                    <h2 class="text-3xl font-black mb-8">${user.recruits[idx]}</h2>
+                    <div class="flex gap-4">
+                        <button onclick="save(1)" class="flex-1 bg-emerald-600 text-white py-4 rounded-2xl font-bold">PRESENT</button>
+                        <button onclick="save(0)" class="flex-1 bg-slate-800 text-white py-4 rounded-2xl font-bold">ABSENT</button>
+                    </div>
+                </div>`;
+        };
+        window.save = async (s) => {
+            const name = user.recruits[idx];
+            idx++; draw();
+            await fetch(URL, { method: 'POST', body: JSON.stringify({ action: 'save_attendance', email: user.email, name, status: s })});
+        };
+        draw();
+    }
+
+    // --- ADMIN: EDIT TODAY'S ATTENDANCE ---
+    async function goEditAttendance() {
+        const content = document.getElementById('main-content');
+        content.innerHTML = "Fetching today's records...";
+        const res = await fetch(URL, { method: 'POST', body: JSON.stringify({ action: 'get_master_stats' })});
+        const data = (await res.json()).filter(r => r.admin === user.email);
+        
+        content.innerHTML = `
+            <div class="space-y-2">
+                <h3 class="font-bold p-2">Today's Entries (Tap to flip)</h3>
+                ${data.map(r => `
+                    <div class="bg-white p-4 rounded-2xl flex justify-between items-center shadow-sm">
+                        <span>${r.name}</span>
+                        <div class="flex gap-2">
+                            <button onclick="updateStatus('${r.name}', 1)" class="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold">P</button>
+                            <button onclick="updateStatus('${r.name}', 0)" class="px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold">A</button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>`;
+    }
+
+    window.updateStatus = async (name, s) => {
+        await fetch(URL, { method: 'POST', body: JSON.stringify({ action: 'save_attendance', email: user.email, name, status: s })});
+        alert("Updated!");
+    }
+
+    // --- SUPER ADMIN: MANAGE RECRUITS ---
+    async function goMaster() {
+        const res = await fetch(URL, { method: 'POST', body: JSON.stringify({ action: 'get_master_stats' })});
+        cache = await res.json();
+        renderMaster(cache);
+    }
+
+    function renderMaster(data) {
+        document.getElementById('main-content').innerHTML = `
+            <div class="bg-white rounded-3xl shadow-sm overflow-hidden border">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-slate-50 font-bold uppercase">
+                        <tr><th class="p-3">S/N</th><th class="p-3">Recruit</th><th class="p-3">Admin</th><th class="p-3">Days</th><th class="p-3">Edit</th></tr>
+                    </thead>
+                    <tbody class="divide-y">
+                        ${data.map((r, i) => `
+                            <tr>
+                                <td class="p-3 text-slate-400">${i+1}</td>
+                                <td class="p-3 font-bold">${r.name}</td>
+                                <td class="p-3 text-[10px]">${r.admin.split('@')[0]}</td>
+                                <td class="p-3 font-bold text-emerald-600">${r.count}</td>
+                                <td class="p-3"><button onclick="editName('${r.name}')" class="text-emerald-500"><i data-lucide="edit" class="w-3"></i></button></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>`;
+        lucide.createIcons();
+    }
+
+    window.editName = async (oldName) => {
+        const newName = prompt("Enter new name for " + oldName);
+        if (newName) {
+            await fetch(URL, { method: 'POST', body: JSON.stringify({ action: 'edit_recruit', oldName, newName })});
+            goMaster();
+        }
+    }
+
+    function pdfAll() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.text("JIBWIS RECRUIT MASTER RECORD", 14, 15);
+        const body = cache.map((r, i) => [i+1, r.name, r.admin, r.count, r.percent + '%']);
+        doc.autoTable({ head: [['S/N', 'Name', 'Staff', 'Present Count', '%']], body: body, startY: 20 });
+        doc.save("Recruit_Master_List.pdf");
+    }
+
+    lucide.createIcons();
+</script>
+</body>
+</html>
+
