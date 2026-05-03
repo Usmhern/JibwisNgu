@@ -326,7 +326,7 @@
     </script>
 </body>
 </html>
-
+-->
 
 <!DOCTYPE html>
 <html lang="en">
@@ -369,7 +369,7 @@
         <nav id="navbar" class="fixed bottom-6 left-6 right-6 bg-white border border-slate-200 rounded-[2rem] p-4 flex justify-around shadow-2xl z-50"></nav>
     </div>
 
-<script>
+<!--<script>
     const URL = 'https://script.google.com/macros/s/AKfycbyL1wBhNljjKc6KCWoVVRUB7LEkeXHQIszLJAgyprWO9XsvH79fYyYCdH8LLv7uz3vW/exec';
     let user = null;
 
@@ -503,146 +503,183 @@
     }
 
     lucide.createIcons();
-</script>
-</body>
-    </html>
-    -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>JIBWIS PRO MAX</title>
-
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-
-<style>
-body{font-family:sans-serif;background:#f8fafc}
-.btn{padding:12px;border-radius:10px}
-</style>
-</head>
-
-<body>
-
-<!-- LOGIN -->
-<div id="login-view">
-    <h2>Login</h2>
-    <input id="email" placeholder="Email"><br><br>
-    <input id="pass" type="password" placeholder="Password"><br><br>
-    <button onclick="doLogin()" class="btn">Login</button>
-</div>
-
-<!-- APP -->
-<div id="app" style="display:none">
-
-<h3 id="user-role"></h3>
-
-<input id="srch" oninput="runSearch()" placeholder="Search...">
-
-<div id="main-content"></div>
-
-<button onclick="pdfAll()">Download PDF</button>
-
-</div>
-
-<script>
+</script>-->
+    <script>
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyL1wBhNljjKc6KCWoVVRUB7LEkeXHQIszLJAgyprWO9XsvH79fYyYCdH8LLv7uz3vW/exec';
 
-let user=null;
-let cache=[];
-let filteredCache=[];
+let user = null;
+let cache = [];
+let filteredCache = [];
+let markedToday = new Set();
+let inactivityTimer;
 
-// LOGIN
-async function doLogin(){
-    let email=email.value;
-    let password=pass.value;
+// ================= UI FEEDBACK =================
 
-    let res=await fetch(SCRIPT_URL,{
-        method:'POST',
-        body:JSON.stringify({action:'login',email,password})
-    });
-
-    let data=await res.json();
-
-    if(data.success){
-        user=data;
-        document.getElementById("login-view").style.display="none";
-        document.getElementById("app").style.display="block";
-
-        document.getElementById("user-role").innerText=user.role;
-
-        if(user.role==="SUPER_ADMIN") goMaster();
-        else goMark();
-    } else alert("Login failed");
+function toast(msg, type="success") {
+    const t = document.createElement("div");
+    t.innerText = msg;
+    t.className = `fixed bottom-24 left-1/2 -translate-x-1/2 px-6 py-3 rounded-xl text-white text-sm z-[9999] ${
+        type === "error" ? "bg-rose-500" : "bg-emerald-600"
+    }`;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2500);
 }
 
-// ATTENDANCE
-function goMark(){
-    let idx=0;
+function playSound(type) {
+    const s = {
+        success:"https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg",
+        error:"https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg",
+        click:"https://actions.google.com/sounds/v1/ui/click.ogg"
+    };
+    new Audio(s[type]).play();
+}
 
-    function draw(){
-        if(idx>=user.recruits.length){
-            main-content.innerHTML="<h2>Done</h2>";
+// ================= SAFE FETCH =================
+
+async function safeFetch(body) {
+    try {
+        const res = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify(body)
+        });
+        return await res.json();
+    } catch(e) {
+        saveOffline(body);
+        toast("Offline saved", "error");
+    }
+}
+
+// ================= OFFLINE =================
+
+function saveOffline(data) {
+    let o = JSON.parse(localStorage.getItem("offline")||"[]");
+    o.push(data);
+    localStorage.setItem("offline", JSON.stringify(o));
+}
+
+async function syncOffline() {
+    let o = JSON.parse(localStorage.getItem("offline")||"[]");
+    for(let item of o) await safeFetch(item);
+    localStorage.removeItem("offline");
+    if(o.length) toast("Synced offline data");
+}
+
+window.addEventListener("online", syncOffline);
+window.addEventListener("offline", ()=>toast("No internet","error"));
+
+// ================= LOGIN =================
+
+async function doLogin() {
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('pass').value;
+
+    if(!email || !password) return toast("Fill all fields","error");
+
+    const data = await safeFetch({action:'login',email,password});
+
+    if(data && data.success) {
+        user = data;
+        document.getElementById('login-view').remove();
+        document.getElementById('app').classList.remove('hidden');
+
+        renderNav();
+        user.role==='SUPER_ADMIN'?goMaster():goMark();
+
+        toast("Welcome");
+        playSound("success");
+    } else {
+        toast("Login failed","error");
+    }
+}
+
+// ================= NAV =================
+
+function renderNav() {
+    const nav = document.getElementById('navbar');
+
+    if(user.role==='SUPER_ADMIN') {
+        nav.innerHTML = `
+        <button onclick="goMaster()">Dashboard</button>
+        <button onclick="goAdmins()">Admins</button>
+        <button onclick="showChart()">Chart</button>`;
+    } else {
+        nav.innerHTML = `
+        <button onclick="goMark()">Mark</button>
+        <button onclick="goEditToday()">Edit</button>
+        <button onclick="pdfSelf()">Report</button>
+        <button onclick="showProfile()">Profile</button>`;
+    }
+}
+
+// ================= ATTENDANCE =================
+
+function goMark() {
+    let idx = 0;
+    const content = document.getElementById('main-content');
+
+    const draw = () => {
+        if(idx >= user.recruits.length) {
+            content.innerHTML = `<h2>Done</h2>`;
             return;
         }
 
-        main-content.innerHTML=`
+        content.innerHTML = `
         <h2>${user.recruits[idx]}</h2>
+        <p>${idx+1}/${user.recruits.length}</p>
         <button onclick="save(1)">PRESENT</button>
         <button onclick="save(0)">ABSENT</button>`;
-    }
+    };
 
-    window.save=async(s)=>{
-        let name=user.recruits[idx];
+    window.save = async (s) => {
+        let name = user.recruits[idx];
 
-        await fetch(SCRIPT_URL,{
-            method:'POST',
-            body:JSON.stringify({
-                action:'save_attendance',
-                email:user.email,
-                name,
-                status:s
-            })
+        if(markedToday.has(name)) {
+            toast("Already marked","error");
+            return;
+        }
+
+        markedToday.add(name);
+
+        await safeFetch({
+            action:'save_attendance',
+            email:user.email,
+            name,
+            status:s
         });
 
+        playSound("success");
         idx++;
         draw();
-    }
+    };
 
     draw();
 }
 
-// MASTER
-async function goMaster(){
-    let res=await fetch(SCRIPT_URL,{
-        method:'POST',
-        body:JSON.stringify({action:'get_master_stats'})
-    });
+// ================= MASTER =================
 
-    cache=await res.json();
+async function goMaster() {
+    cache = await safeFetch({action:'get_master_stats'});
     drawTable(cache);
 }
 
-function drawTable(data){
-    filteredCache=data;
+function drawTable(data) {
+    filteredCache = data;
 
-    main-content.innerHTML=`
-    <table border="1">
-    ${data.map((r,i)=>`
-    <tr>
-    <td>${i+1}</td>
-    <td>${r.name}</td>
-    <td>${r.count}</td>
-    </tr>`).join("")}
+    document.getElementById('main-content').innerHTML = `
+    <table class="w-full">
+        ${data.map((r,i)=>`
+        <tr>
+            <td>${i+1}</td>
+            <td>${r.name}</td>
+            <td>${r.count}</td>
+        </tr>`).join('')}
     </table>`;
 }
 
-// SEARCH
-function runSearch(){
-    let q=srch.value.toLowerCase();
+// ================= SEARCH =================
+
+function runSearch() {
+    const q = document.getElementById('srch').value.toLowerCase();
 
     if(!q) return drawTable(cache);
 
@@ -652,40 +689,97 @@ function runSearch(){
     ));
 }
 
-// PDF
-function pdfAll(){
-    const { jsPDF } = window.jspdf;
-    let doc=new jsPDF();
+// ================= PDF =================
 
-    let data=filteredCache.length?filteredCache:cache;
+function pdfAll() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    let data = filteredCache.length?filteredCache:cache;
 
     doc.text("REPORT",10,10);
 
     doc.autoTable({
-        body:data.map(r=>[r.name,r.count])
+        body: data.map(r=>[r.name,r.count])
     });
 
-    doc.save("report.pdf");
+    doc.save("Filtered_Report.pdf");
 }
 
-// REALTIME
-setInterval(async()=>{
-    if(!user) return;
+// ================= CHART =================
 
-    let res=await fetch(SCRIPT_URL,{
-        method:'POST',
-        body:JSON.stringify({action:'get_master_stats'})
+function showChart() {
+    document.getElementById('main-content').innerHTML = `<canvas id="chart"></canvas>`;
+    new Chart(document.getElementById('chart'), {
+        type:'bar',
+        data:{
+            labels:cache.map(r=>r.name),
+            datasets:[{label:'Attendance',data:cache.map(r=>r.count)}]
+        }
     });
+}
 
-    let updated=await res.json();
+// ================= PROFILE =================
 
+function showProfile() {
+    document.getElementById('main-content').innerHTML = `
+    <h2>${user.email}</h2>
+    <input type="file" onchange="uploadAvatar(event)">
+    <img id="avatar" width="100" src="${localStorage.getItem("avatar")||""}">`;
+}
+
+function uploadAvatar(e) {
+    const reader = new FileReader();
+    reader.onload = ()=>{
+        localStorage.setItem("avatar", reader.result);
+        document.getElementById("avatar").src = reader.result;
+    };
+    reader.readAsDataURL(e.target.files[0]);
+}
+
+// ================= REALTIME =================
+
+setInterval(async ()=>{
+    if(!user) return;
+    let updated = await safeFetch({action:'get_master_stats'});
     if(JSON.stringify(updated)!==JSON.stringify(cache)){
-        cache=updated;
+        cache = updated;
         drawTable(cache);
+        toast("Updated");
     }
 },10000);
 
-</script>
+// ================= SESSION =================
 
+function resetTimer(){
+    clearTimeout(inactivityTimer);
+    inactivityTimer=setTimeout(()=>{
+        toast("Session expired");
+        location.reload();
+    },600000);
+}
+['click','keypress','mousemove'].forEach(e=>document.addEventListener(e,resetTimer));
+resetTimer();
+
+// ================= NOTIFICATION =================
+
+function notify(title,body){
+    if(Notification.permission==="granted"){
+        new Notification(title,{body});
+    } else {
+        Notification.requestPermission();
+    }
+}
+
+// ================= INIT =================
+
+syncOffline();
+
+// ================= SERVICE WORKER =================
+
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js');
+}
+</script>
 </body>
-</html>
+    </html>
