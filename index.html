@@ -1,421 +1,328 @@
-<!--<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JIBWIS Portal PRO</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-    <style>
-        .fade-in { animation: fadeIn 0.3s ease-in; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    </style>
-</head>
-<body class="bg-slate-50 min-h-screen pb-20 font-sans">
-
-    <div id="login-view" class="fixed inset-0 bg-emerald-950 z-[1000] flex items-center justify-center p-6">
-        <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-sm shadow-2xl">
-            <h2 class="text-3xl font-black text-slate-800 mb-2">Portal Access</h2>
-            <p class="text-slate-400 text-sm mb-8">Enter your secure credentials</p>
-            <input type="email" id="email" placeholder="Email" class="w-full bg-slate-100 p-4 rounded-2xl mb-4 outline-none border-none focus:ring-2 focus:ring-emerald-500">
-            <input type="password" id="pass" placeholder="Password" class="w-full bg-slate-100 p-4 rounded-2xl mb-6 outline-none border-none focus:ring-2 focus:ring-emerald-500">
-            <button onclick="doLogin()" id="lbtn" class="w-full bg-emerald-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-emerald-900/20 active:scale-95 transition-all">Log In</button>
-        </div>
-    </div>
-
-    <div id="app" class="hidden">
-        <header class="bg-white border-b p-4 sticky top-0 z-50 flex justify-between items-center">
-            <h1 class="font-black text-emerald-700 tracking-tighter text-xl uppercase">Jibwis Management</h1>
-            <button onclick="location.reload()" class="bg-slate-100 p-2 rounded-full"><i data-lucide="log-out" class="w-4 h-4"></i></button>
-        </header>
-
-        <main class="max-w-xl mx-auto p-4 space-y-6">
-            <div id="super-tools" class="hidden space-y-4">
-                <div class="flex gap-2">
-                    <div class="relative flex-1">
-                        <i data-lucide="search" class="absolute left-3 top-3 w-4 text-slate-400"></i>
-                        <input type="text" id="srch" oninput="runSearch()" placeholder="Search Recruits..." class="w-full pl-10 pr-4 py-2 rounded-xl border-none shadow-sm focus:ring-2 focus:ring-emerald-500">
-                    </div>
-                    <button onclick="runSort()" class="bg-white p-2 rounded-xl shadow-sm text-slate-600"><i data-lucide="arrow-up-az"></i></button>
-                    <button onclick="pdfAll()" class="bg-emerald-600 text-white px-4 rounded-xl font-bold text-[10px]">PDF</button>
-                </div>
-            </div>
-
-            <div id="main-content" class="fade-in"></div>
-        </main>
-
-        <nav id="navbar" class="fixed bottom-0 left-0 right-0 bg-white border-t p-3 flex justify-around shadow-2xl z-50"></nav>
-    </div>
-
-<script>
-    const URL = 'Https://script.google.com/macros/s/AKfycbyrdo5x2TWclE2_6GGvz9026BLzxrNOSSIZain-8Tw_CBRGf1j5-VCck2mrTM-6a91a/exec'; 
-    let user = null;
-    let cache = [];
-    let isAsc = true;
-
-    async function doLogin() {
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('pass').value;
-        const btn = document.getElementById('lbtn');
-        btn.innerText = "Checking...";
-        
-        const res = await fetch(URL, { method: 'POST', body: JSON.stringify({ action: 'login', email, password })});
-        const data = await res.json();
-        
-        if (data.success) {
-            user = data;
-            document.getElementById('login-view').remove();
-            document.getElementById('app').classList.remove('hidden');
-            renderNav();
-            user.role === 'SUPER_ADMIN' ? goMaster() : goMark();
-        } else {
-            alert("Unauthorized: Incorrect Email or Password");
-            btn.innerText = "Log In";
-        }
-    }
-
-    function renderNav() {
-        const nav = document.getElementById('navbar');
-        if (user.role === 'SUPER_ADMIN') {
-            document.getElementById('super-tools').classList.remove('hidden');
-            nav.innerHTML = `
-                <button onclick="goMaster()" class="flex flex-col items-center text-emerald-600"><i data-lucide="users"></i><span class="text-[9px] font-bold">MASTER</span></button>
-                <button onclick="goAdmins()" class="flex flex-col items-center text-slate-400"><i data-lucide="shield"></i><span class="text-[9px] font-bold">STAFF</span></button>
-            `;
-        } else {
-            nav.innerHTML = `
-                <button onclick="goMark()" class="flex flex-col items-center text-emerald-600"><i data-lucide="check-circle-2"></i><span class="text-[9px] font-bold">MARK</span></button>
-                <button onclick="pdfSelf()" class="flex flex-col items-center text-slate-400"><i data-lucide="file-text"></i><span class="text-[9px] font-bold">MY PDF</span></button>
-            `;
-        }
-        lucide.createIcons();
-    }
-
-    // --- VIEW: STAFF CRUD (SUPER ADMIN ONLY) ---
-    async function goAdmins() {
-        const content = document.getElementById('main-content');
-        content.innerHTML = `<p class="text-center py-20 text-slate-400">Loading Staff List...</p>`;
-        
-        const res = await fetch(URL, { method: 'POST', body: JSON.stringify({ action: 'get_admins' })});
-        const admins = await res.json();
-
-        content.innerHTML = `
-            <div class="bg-white p-6 rounded-3xl shadow-sm mb-6 border border-slate-100">
-                <h3 class="font-bold mb-4 text-slate-800">Enroll New Admin</h3>
-                <input type="email" id="new-e" placeholder="Staff Gmail" class="w-full p-4 bg-slate-50 rounded-2xl mb-3 outline-none border-none">
-                <input type="text" id="new-p" placeholder="Assign Password" class="w-full p-4 bg-slate-50 rounded-2xl mb-4 outline-none border-none">
-                <button onclick="addStaff()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold">Create Account</button>
-            </div>
-            <div class="bg-white rounded-3xl shadow-sm overflow-hidden border border-slate-100">
-                <h3 class="p-4 bg-slate-50 font-black text-[10px] text-slate-400 uppercase tracking-widest">Active Staff</h3>
-                <div class="divide-y">
-                    ${admins.map(a => `
-                        <div class="p-4 flex justify-between items-center">
-                            <div>
-                                <p class="font-bold text-slate-700">${a[0]}</p>
-                                <p class="text-[10px] text-emerald-600 font-bold uppercase">${a[1]}</p>
-                            </div>
-                            <button onclick="deleteStaff('${a[0]}')" class="text-rose-500 bg-rose-50 p-2 rounded-xl"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-        lucide.createIcons();
-    }
-
-    async function addStaff() {
-        const newEmail = document.getElementById('new-e').value;
-        const newPass = document.getElementById('new-p').value;
-        if(!newEmail || !newPass) return alert("Fill all fields");
-        await fetch(URL, { method: 'POST', body: JSON.stringify({ action: 'add_admin', newEmail, newPass })});
-        goAdmins();
-    }
-
-    async function deleteStaff(target) {
-        if(!confirm("Permanently remove this admin?")) return;
-        await fetch(URL, { method: 'POST', body: JSON.stringify({ action: 'delete_admin', target })});
-        goAdmins();
-    }
-
-    // --- VIEW: MARKING (ADMIN ONLY + PERSISTENCE) ---
-    function goMark() {
-        const day = new Date().getDay();
-        const content = document.getElementById('main-content');
-        
-        // SAT(6) SUN(0)
-        if (day !== 0 && day !== 6) { 
-            content.innerHTML = `<div class="p-10 text-center bg-white rounded-3xl shadow-sm"><i data-lucide="lock" class="mx-auto text-amber-500 mb-4"></i><p class="text-slate-400 font-bold">Portal locked. Opens Sat & Sun.</p></div>`; 
-            lucide.createIcons();
-            return; 
-        }
-
-        let idx = 0;
-        const render = () => {
-            if (idx >= user.recruits.length) {
-                content.innerHTML = `
-                    <div class="p-10 text-center bg-white rounded-[2.5rem] shadow-xl border-t-8 border-emerald-500">
-                        <i data-lucide="check-circle" class="mx-auto text-emerald-500 w-12 h-12 mb-4"></i>
-                        <h2 class="text-xl font-black text-slate-800">Session Finished</h2>
-                        <p class="text-slate-400 text-sm mt-2">All your recruits are marked for today.</p>
-                    </div>`;
-                lucide.createIcons();
-                return;
-            }
-            content.innerHTML = `
-                <div class="bg-white p-10 rounded-[3rem] shadow-2xl text-center border-t-8 border-emerald-600">
-                    <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-6">Process Recruit</p>
-                    <h2 class="text-4xl font-black text-slate-800 mb-10 tracking-tight">${user.recruits[idx]}</h2>
-                    <div class="grid grid-cols-2 gap-4">
-                        <button onclick="save(1)" class="bg-emerald-600 text-white py-6 rounded-[2rem] font-black shadow-lg">PRESENT</button>
-                        <button onclick="save(0)" class="bg-slate-900 text-white py-6 rounded-[2rem] font-black">ABSENT</button>
-                    </div>
-                </div>`;
-        };
-
-        window.save = async (s) => {
-            const name = user.recruits[idx];
-            idx++; render();
-            await fetch(URL, { method: 'POST', body: JSON.stringify({ action: 'save_attendance', email: user.email, name, status: s })});
-        };
-        render();
-    }
-
-    // --- VIEW: MASTER STATS (SUPER ADMIN) ---
-    async function goMaster() {
-        const content = document.getElementById('main-content');
-        content.innerHTML = `<p class="text-center py-20 text-slate-400">Generating Master Table...</p>`;
-        const res = await fetch(URL, { method: 'POST', body: JSON.stringify({ action: 'get_master_stats' })});
-        cache = await res.json();
-        drawTable(cache);
-    }
-
-    function drawTable(data) {
-        document.getElementById('main-content').innerHTML = `
-            <div class="bg-white rounded-3xl shadow-sm overflow-hidden border border-slate-100">
-                <table class="w-full text-left text-sm">
-                    <thead class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase">
-                        <tr><th class="p-4">Recruit</th><th class="p-4">Staff Admin</th><th class="p-4 text-right">Att%</th></tr>
-                    </thead>
-                    <tbody class="divide-y">${data.map(r => `<tr><td class="p-4 font-bold text-slate-700">${r.name}</td><td class="p-4 text-[10px] text-slate-400">${r.admin}</td><td class="p-4 text-right font-black text-emerald-600">${r.percent}%</td></tr>`).join('')}</tbody>
-                </table>
-            </div>`;
-    }
-
-    function runSearch() {
-        const q = document.getElementById('srch').value.toLowerCase();
-        drawTable(cache.filter(r => r.name.toLowerCase().includes(q) || r.admin.toLowerCase().includes(q)));
-    }
-
-    function runSort() {
-        cache.sort((a,b) => isAsc ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name));
-        isAsc = !isAsc; drawTable(cache);
-    }
-
-    // PDF GENERATION
-    function pdfAll() {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        doc.text("JIBWIS GENERAL ATTENDANCE REPORT", 14, 15);
-        doc.autoTable({ head: [['Recruit Name', 'Assigned Staff', 'Attendance %']], body: cache.map(r => [r.name, r.admin, r.percent+'%']), startY: 20 });
-        doc.save("Jibwis_General_Report.pdf");
-    }
-
-    async function pdfSelf() {
-        const res = await fetch(URL, { method: 'POST', body: JSON.stringify({ action: 'get_master_stats' })});
-        const data = (await res.json()).filter(r => r.admin === user.email);
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        doc.text(`ATTENDANCE REPORT - ${user.email}`, 14, 15);
-        doc.autoTable({ head: [['Recruit Name', 'Performance']], body: data.map(r => [r.name, r.percent+'%']), startY: 20 });
-        doc.save("Personal_Report.pdf");
-    }
-
-    lucide.createIcons();
-</script>
-</body>
-    </html>
-    -->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JIBWIS Portal v3</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>JIBWIS | Advanced Management Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-</head>
-<body class="bg-slate-50 min-h-screen pb-24">
 
-    <div id="login-view" class="fixed inset-0 bg-emerald-950 z-[1000] flex items-center justify-center p-6">
-        <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-sm">
-            <h2 class="text-2xl font-black mb-6">JIBWIS Login</h2>
-            <input type="email" id="email" placeholder="Email" class="w-full bg-slate-100 p-4 rounded-2xl mb-4 outline-none">
-            <input type="password" id="pass" placeholder="Password" class="w-full bg-slate-100 p-4 rounded-2xl mb-6 outline-none">
-            <button onclick="doLogin()" class="w-full bg-emerald-600 text-white py-4 rounded-2xl font-bold">Login</button>
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.3); }
+        .emerald-gradient { background: linear-gradient(135deg, #059669 0%, #064e3b 100%); }
+        .card-shadow { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05); }
+        .marking-btn { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .marking-btn:active { transform: scale(0.95); }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-slide-up { animation: slideUp 0.4s ease-out forwards; }
+    </style>
+</head>
+<body class="bg-[#F8FAFC] min-h-screen text-[#1E293B]">
+
+    <div id="login-view" class="fixed inset-0 z-[1000] emerald-gradient flex items-center justify-center p-6">
+        <div class="absolute inset-0 opacity-10" style="background-image: url('https://www.transparenttextures.com/patterns/carbon-fibre.png');"></div>
+        <div class="bg-white rounded-[2.5rem] p-10 w-full max-w-md shadow-2xl relative animate-slide-up">
+            <div class="w-16 h-16 emerald-gradient rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-emerald-900/20">
+                <i data-lucide="shield-check" class="text-white w-8 h-8"></i>
+            </div>
+            <h2 class="text-3xl font-extrabold tracking-tight mb-2">JIBWIS Portal</h2>
+            <p class="text-slate-500 font-medium mb-8">Advanced Attendance & Staff Management</p>
+            
+            <div class="space-y-4">
+                <div class="space-y-1">
+                    <label class="text-[11px] font-bold uppercase tracking-widest text-slate-400 ml-1">Gmail Address</label>
+                    <input type="email" id="email" class="w-full bg-slate-50 border border-slate-100 p-4 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 transition-all" placeholder="name@gmail.com">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[11px] font-bold uppercase tracking-widest text-slate-400 ml-1">Secure Password</label>
+                    <input type="password" id="pass" class="w-full bg-slate-50 border border-slate-100 p-4 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 transition-all" placeholder="••••••••">
+                </div>
+                <button onclick="doLogin()" id="lbtn" class="w-full emerald-gradient text-white py-5 rounded-2xl font-bold shadow-xl shadow-emerald-900/20 active:scale-[0.98] transition-all mt-4 hover:opacity-90">
+                    Enter Portal
+                </button>
+            </div>
         </div>
     </div>
 
     <div id="app" class="hidden">
-        <header class="bg-white border-b p-4 sticky top-0 z-50 flex justify-between items-center">
-            <h1 class="font-black text-emerald-700">JIBWIS</h1>
-            <button onclick="location.reload()" class="bg-slate-100 p-2 rounded-full"><i data-lucide="log-out" class="w-4 h-4"></i></button>
+        <header class="sticky top-0 z-[100] glass px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 emerald-gradient rounded-xl flex items-center justify-center text-white font-bold shadow-md">J</div>
+                <div>
+                    <h1 class="text-sm font-extrabold uppercase tracking-tighter">Jibwis Pro</h1>
+                    <p id="user-role-badge" class="text-[9px] font-bold text-emerald-600 tracking-widest uppercase">Admin</p>
+                </div>
+            </div>
+            <button onclick="location.reload()" class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-all">
+                <i data-lucide="log-out" class="w-5 h-5"></i>
+            </button>
         </header>
 
-        <main class="max-w-xl mx-auto p-4 space-y-6">
-            <div id="super-tools" class="hidden flex gap-2">
-                <input type="text" id="srch" oninput="runSearch()" placeholder="Search..." class="flex-1 p-3 rounded-xl border shadow-sm outline-none">
-                <button onclick="pdfAll()" class="bg-emerald-600 text-white px-4 rounded-xl font-bold text-xs uppercase">Export PDF</button>
+        <main class="max-w-2xl mx-auto p-6 pb-32">
+            <div id="super-tools" class="hidden space-y-4 mb-8">
+                <div class="flex gap-3">
+                    <div class="relative flex-1">
+                        <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 text-slate-400"></i>
+                        <input type="text" id="srch" oninput="runSearch()" placeholder="Search data..." class="w-full pl-11 pr-4 py-3 bg-white rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-emerald-500 text-sm">
+                    </div>
+                    <button onclick="pdfAll()" class="bg-emerald-600 text-white px-5 rounded-2xl font-bold text-[10px] uppercase shadow-md flex items-center gap-2">
+                        <i data-lucide="download" class="w-3"></i> Report
+                    </button>
+                </div>
             </div>
-            <div id="main-content"></div>
+
+            <div id="main-content" class="animate-slide-up"></div>
         </main>
 
-        <nav id="navbar" class="fixed bottom-0 left-0 right-0 bg-white border-t p-3 flex justify-around shadow-2xl"></nav>
+        <nav class="fixed bottom-6 left-6 right-6 z-[100]">
+            <div id="navbar" class="glass rounded-[2rem] p-3 flex justify-around items-center shadow-2xl border border-white/50">
+                </div>
+        </nav>
     </div>
 
-<script>
-    const URL = 'Https://script.google.com/macros/s/AKfycbyL1wBhNljjKc6KCWoVVRUB7LEkeXHQIszLJAgyprWO9XsvH79fYyYCdH8LLv7uz3vW/exec'; 
-    let user = null;
-    let cache = [];
+    <script>
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyL1wBhNljjKc6KCWoVVRUB7LEkeXHQIszLJAgyprWO9XsvH79fYyYCdH8LLv7uz3vW/exec';
+        let user = null;
+        let cache = [];
 
-    async function doLogin() {
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('pass').value;
-        const res = await fetch(URL, { method: 'POST', body: JSON.stringify({ action: 'login', email, password })});
-        const data = await res.json();
-        if (data.success) {
-            user = data;
-            document.getElementById('login-view').remove();
-            document.getElementById('app').classList.remove('hidden');
-            renderNav();
-            user.role === 'SUPER_ADMIN' ? goMaster() : goMark();
-        } else alert("Error");
-    }
+        async function doLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('pass').value;
+            const btn = document.getElementById('lbtn');
+            if(!email || !password) return alert("Fields required");
 
-    function renderNav() {
-        const nav = document.getElementById('navbar');
-        if (user.role === 'SUPER_ADMIN') {
-            document.getElementById('super-tools').classList.remove('hidden');
-            nav.innerHTML = `
-                <button onclick="goMaster()" class="flex flex-col items-center"><i data-lucide="users"></i><span class="text-[9px]">RECORDS</span></button>
-                <button onclick="goAdmins()" class="flex flex-col items-center"><i data-lucide="shield"></i><span class="text-[9px]">STAFF</span></button>
-            `;
-        } else {
-            nav.innerHTML = `
-                <button onclick="goMark()" class="flex flex-col items-center"><i data-lucide="edit-3"></i><span class="text-[9px]">MARK</span></button>
-                <button onclick="goEditAttendance()" class="flex flex-col items-center"><i data-lucide="refresh-cw"></i><span class="text-[9px]">EDIT TODAY</span></button>
-            `;
+            btn.disabled = true;
+            btn.innerHTML = `<span class="inline-block animate-spin mr-2">◌</span> Verifying...`;
+
+            try {
+                const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'login', email, password })});
+                const data = await res.json();
+                if(data.success) {
+                    user = data;
+                    document.getElementById('login-view').remove();
+                    document.getElementById('app').classList.remove('hidden');
+                    document.getElementById('user-role-badge').innerText = user.role.replace('_', ' ');
+                    renderNav();
+                    user.role === 'SUPER_ADMIN' ? goMaster() : goMark();
+                } else { throw new Error(); }
+            } catch(e) {
+                alert("Login Failed. Please check your credentials.");
+                btn.disabled = false;
+                btn.innerText = "Enter Portal";
+            }
         }
-        lucide.createIcons();
-    }
 
-    // --- ADMIN: MARKING ---
-    function goMark() {
-        const day = new Date().getDay();
-        const content = document.getElementById('main-content');
-        if (day !== 0 && day !== 6) { content.innerHTML = `<p class="p-10 text-center">Locked. Return on Sat/Sun.</p>`; return; }
-        
-        let idx = 0;
-        const draw = () => {
-            if (idx >= user.recruits.length) { content.innerHTML = `<h2 class="text-center font-bold p-10">All marked!</h2>`; return; }
+        function renderNav() {
+            const nav = document.getElementById('navbar');
+            const isActive = "emerald-gradient text-white shadow-emerald-200";
+            const isIdle = "text-slate-400 hover:text-emerald-600";
+            
+            if(user.role === 'SUPER_ADMIN') {
+                document.getElementById('super-tools').classList.remove('hidden');
+                nav.innerHTML = `
+                    <button onclick="goMaster()" class="p-4 rounded-2xl transition-all ${isActive}"><i data-lucide="layout-grid"></i></button>
+                    <button onclick="goAdmins()" class="p-4 rounded-2xl transition-all ${isIdle}"><i data-lucide="users"></i></button>
+                `;
+            } else {
+                nav.innerHTML = `
+                    <button onclick="goMark()" class="p-4 rounded-2xl transition-all ${isActive}"><i data-lucide="calendar-check-2"></i></button>
+                    <button onclick="goEditToday()" class="p-4 rounded-2xl transition-all ${isIdle}"><i data-lucide="edit"></i></button>
+                    <button onclick="pdfSelf()" class="p-4 rounded-2xl transition-all ${isIdle}"><i data-lucide="file-text"></i></button>
+                `;
+            }
+            lucide.createIcons();
+        }
+
+        // --- ATTENDANCE VIEW ---
+        function goMark() {
+            const day = new Date().getDay();
+            const content = document.getElementById('main-content');
+            
+            // Sat (6) Sun (0)
+            if(day !== 0 && day !== 6) {
+                content.innerHTML = `
+                <div class="bg-white p-12 rounded-[3rem] shadow-xl text-center border-t-8 border-amber-400">
+                    <i data-lucide="lock" class="w-16 h-16 text-amber-400 mx-auto mb-6"></i>
+                    <h2 class="text-2xl font-bold">Portal Locked</h2>
+                    <p class="text-slate-500 mt-2">Attendance is only enabled on weekends.</p>
+                </div>`;
+                lucide.createIcons(); return;
+            }
+
+            let idx = 0;
+            const draw = () => {
+                if(idx >= user.recruits.length) {
+                    content.innerHTML = `
+                    <div class="bg-white p-12 rounded-[3rem] shadow-xl text-center border-t-8 border-emerald-500">
+                        <div class="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <i data-lucide="party-popper" class="text-emerald-600 w-10 h-10"></i>
+                        </div>
+                        <h2 class="text-2xl font-extrabold text-slate-800">You're All Caught Up!</h2>
+                        <p class="text-slate-400 mt-2">You have processed all recruits for today.</p>
+                    </div>`;
+                    lucide.createIcons(); return;
+                }
+                content.innerHTML = `
+                    <div class="bg-white p-10 rounded-[3rem] shadow-2xl text-center border-t-[12px] border-emerald-600 fade-in relative overflow-hidden">
+                        <p class="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-8">Process Assignment</p>
+                        <h2 class="text-4xl font-extrabold text-slate-800 mb-12 tracking-tight">${user.recruits[idx]}</h2>
+                        <div class="grid grid-cols-2 gap-4">
+                            <button onclick="save(1)" class="marking-btn bg-emerald-600 text-white py-6 rounded-[2rem] font-bold shadow-lg shadow-emerald-200">PRESENT</button>
+                            <button onclick="save(0)" class="marking-btn bg-slate-900 text-white py-6 rounded-[2rem] font-bold shadow-lg">ABSENT</button>
+                        </div>
+                    </div>`;
+            };
+            window.save = async (s) => {
+                const name = user.recruits[idx];
+                idx++; draw();
+                await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'save_attendance', email: user.email, name, status: s })});
+            };
+            draw();
+        }
+
+        // --- STAFF MANAGEMENT (SUPER ADMIN) ---
+        async function goAdmins() {
+            const content = document.getElementById('main-content');
+            content.innerHTML = `<div class="p-20 text-center animate-pulse text-emerald-600 font-bold">Accessing Staff Directory...</div>`;
+            const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'get_admins' })});
+            const admins = await res.json();
             content.innerHTML = `
-                <div class="bg-white p-10 rounded-[3rem] shadow-xl text-center">
-                    <h2 class="text-3xl font-black mb-8">${user.recruits[idx]}</h2>
-                    <div class="flex gap-4">
-                        <button onclick="save(1)" class="flex-1 bg-emerald-600 text-white py-4 rounded-2xl font-bold">PRESENT</button>
-                        <button onclick="save(0)" class="flex-1 bg-slate-800 text-white py-4 rounded-2xl font-bold">ABSENT</button>
+                <div class="bg-white p-8 rounded-[2.5rem] shadow-sm mb-6 border border-slate-100">
+                    <h3 class="font-extrabold text-lg mb-6">Enroll Staff Admin</h3>
+                    <div class="space-y-4">
+                        <input type="email" id="ne" placeholder="Gmail Address" class="w-full p-4 bg-slate-50 rounded-2xl outline-none">
+                        <input type="text" id="np" placeholder="Secure Password" class="w-full p-4 bg-slate-50 rounded-2xl outline-none">
+                        <button onclick="addStaff()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold shadow-lg">Register Admin</button>
+                    </div>
+                </div>
+                <div class="bg-white rounded-[2.5rem] shadow-sm overflow-hidden border border-slate-100">
+                    <div class="p-6 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Authorized Personnel</span>
+                    </div>
+                    <div class="divide-y divide-slate-50">
+                        ${admins.map(a => `<div class="p-6 flex justify-between items-center hover:bg-slate-50 transition-colors">
+                            <div><p class="font-bold text-slate-700">${a[0]}</p><p class="text-[10px] text-emerald-600 font-bold uppercase tracking-tighter">${a[1]}</p></div>
+                            <button onclick="delStaff('${a[0]}')" class="w-10 h-10 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center active:scale-90 transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </div>`).join('')}
                     </div>
                 </div>`;
-        };
-        window.save = async (s) => {
-            const name = user.recruits[idx];
-            idx++; draw();
-            await fetch(URL, { method: 'POST', body: JSON.stringify({ action: 'save_attendance', email: user.email, name, status: s })});
-        };
-        draw();
-    }
-
-    // --- ADMIN: EDIT TODAY'S ATTENDANCE ---
-    async function goEditAttendance() {
-        const content = document.getElementById('main-content');
-        content.innerHTML = "Fetching today's records...";
-        const res = await fetch(URL, { method: 'POST', body: JSON.stringify({ action: 'get_master_stats' })});
-        const data = (await res.json()).filter(r => r.admin === user.email);
-        
-        content.innerHTML = `
-            <div class="space-y-2">
-                <h3 class="font-bold p-2">Today's Entries (Tap to flip)</h3>
-                ${data.map(r => `
-                    <div class="bg-white p-4 rounded-2xl flex justify-between items-center shadow-sm">
-                        <span>${r.name}</span>
-                        <div class="flex gap-2">
-                            <button onclick="updateStatus('${r.name}', 1)" class="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold">P</button>
-                            <button onclick="updateStatus('${r.name}', 0)" class="px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold">A</button>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>`;
-    }
-
-    window.updateStatus = async (name, s) => {
-        await fetch(URL, { method: 'POST', body: JSON.stringify({ action: 'save_attendance', email: user.email, name, status: s })});
-        alert("Updated!");
-    }
-
-    // --- SUPER ADMIN: MANAGE RECRUITS ---
-    async function goMaster() {
-        const res = await fetch(URL, { method: 'POST', body: JSON.stringify({ action: 'get_master_stats' })});
-        cache = await res.json();
-        renderMaster(cache);
-    }
-
-    function renderMaster(data) {
-        document.getElementById('main-content').innerHTML = `
-            <div class="bg-white rounded-3xl shadow-sm overflow-hidden border">
-                <table class="w-full text-left text-xs">
-                    <thead class="bg-slate-50 font-bold uppercase">
-                        <tr><th class="p-3">S/N</th><th class="p-3">Recruit</th><th class="p-3">Admin</th><th class="p-3">Days</th><th class="p-3">Edit</th></tr>
-                    </thead>
-                    <tbody class="divide-y">
-                        ${data.map((r, i) => `
-                            <tr>
-                                <td class="p-3 text-slate-400">${i+1}</td>
-                                <td class="p-3 font-bold">${r.name}</td>
-                                <td class="p-3 text-[10px]">${r.admin.split('@')[0]}</td>
-                                <td class="p-3 font-bold text-emerald-600">${r.count}</td>
-                                <td class="p-3"><button onclick="editName('${r.name}')" class="text-emerald-500"><i data-lucide="edit" class="w-3"></i></button></td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            </div>`;
-        lucide.createIcons();
-    }
-
-    window.editName = async (oldName) => {
-        const newName = prompt("Enter new name for " + oldName);
-        if (newName) {
-            await fetch(URL, { method: 'POST', body: JSON.stringify({ action: 'edit_recruit', oldName, newName })});
-            goMaster();
+            lucide.createIcons();
         }
-    }
 
-    function pdfAll() {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        doc.text("JIBWIS RECRUIT MASTER RECORD", 14, 15);
-        const body = cache.map((r, i) => [i+1, r.name, r.admin, r.count, r.percent + '%']);
-        doc.autoTable({ head: [['S/N', 'Name', 'Staff', 'Present Count', '%']], body: body, startY: 20 });
-        doc.save("Recruit_Master_List.pdf");
-    }
+        async function addStaff() {
+            const newEmail = document.getElementById('ne').value;
+            const newPass = document.getElementById('np').value;
+            if(!newEmail || !newPass) return alert("Missing fields");
+            await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'add_admin', newEmail, newPass })});
+            goAdmins();
+        }
 
-    lucide.createIcons();
-</script>
+        async function delStaff(target) {
+            if(!confirm("Revoke admin access?")) return;
+            await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'delete_admin', target })});
+            goAdmins();
+        }
+
+        // --- MASTER DATA (SUPER ADMIN) ---
+        async function goMaster() {
+            const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'get_master_stats' })});
+            cache = await res.json();
+            drawTable(cache);
+        }
+
+        function drawTable(data) {
+            document.getElementById('main-content').innerHTML = `
+                <div class="bg-white rounded-[2rem] shadow-sm overflow-hidden border border-slate-100">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">
+                            <tr><th class="p-5">S/N</th><th class="p-5">Recruit</th><th class="p-5">Staff</th><th class="p-5">Coming</th><th class="p-5"></th></tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-50">
+                            ${data.map((r, i) => `<tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-5 text-slate-300 font-medium">${i+1}</td>
+                                <td class="p-5 font-bold text-slate-800">${r.name}</td>
+                                <td class="p-5 text-xs text-slate-400">${r.admin.split('@')[0]}</td>
+                                <td class="p-5 font-black text-emerald-600">${r.count}</td>
+                                <td class="p-5 text-right"><button onclick="editRecruit('${r.name}')" class="text-blue-400 p-2"><i data-lucide="edit-3" class="w-4 h-4"></i></button></td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
+            lucide.createIcons();
+        }
+
+        async function editRecruit(oldName) {
+            const newName = prompt("Rename Recruit:", oldName);
+            if(newName && newName !== oldName) {
+                await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'edit_recruit', oldName, newName })});
+                goMaster();
+            }
+        }
+
+        // --- ADMIN EDIT MODE ---
+        async function goEditToday() {
+            const content = document.getElementById('main-content');
+            content.innerHTML = `<div class="p-20 text-center animate-pulse text-emerald-600">Retrieving today's logs...</div>`;
+            const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'get_master_stats' })});
+            const data = (await res.json()).filter(r => r.admin === user.email);
+            
+            content.innerHTML = `
+                <h3 class="font-extrabold text-lg mb-4 ml-2">Today's Entries</h3>
+                <div class="space-y-3">
+                    ${data.map(r => `
+                        <div class="bg-white p-5 rounded-[2rem] flex justify-between items-center shadow-sm border border-slate-100">
+                            <span class="font-bold text-slate-700">${r.name}</span>
+                            <div class="flex gap-2">
+                                <button onclick="fixEntry('${r.name}', 1)" class="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl font-black text-xs">P</button>
+                                <button onclick="fixEntry('${r.name}', 0)" class="w-10 h-10 bg-rose-100 text-rose-600 rounded-xl font-black text-xs">A</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>`;
+            lucide.createIcons();
+        }
+
+        window.fixEntry = async (name, s) => {
+            await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'save_attendance', email: user.email, name, status: s })});
+            alert("Updated Entry: " + name);
+            goEditToday();
+        }
+
+        // --- EXPORT TOOLS ---
+        function runSearch() {
+            const q = document.getElementById('srch').value.toLowerCase();
+            drawTable(cache.filter(r => r.name.toLowerCase().includes(q) || r.admin.toLowerCase().includes(q)));
+        }
+
+        function pdfAll() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFontSize(22); doc.setTextColor(5, 150, 105);
+            doc.text("JIBWIS PERFORMANCE RECORD", 14, 25);
+            doc.autoTable({ 
+                head: [['S/N', 'Recruit Name', 'Admin', 'Coming Count', 'Efficiency']], 
+                body: cache.map((r, i) => [i+1, r.name, r.admin, r.count, r.percent+'%']), 
+                startY: 35,
+                headStyles: { fillColor: [6, 78, 59] }
+            });
+            doc.save("JIBWIS_Master_Report.pdf");
+        }
+
+        async function pdfSelf() {
+            const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'get_master_stats' })});
+            const data = (await res.json()).filter(r => r.admin === user.email);
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.text("Personal Staff Report: " + user.email, 14, 20);
+            doc.autoTable({ head: [['Recruit', 'Total Attendance']], body: data.map(r => [r.name, r.count]), startY: 30 });
+            doc.save("My_Report.pdf");
+        }
+
+        lucide.createIcons();
+    </script>
 </body>
 </html>
-
