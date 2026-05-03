@@ -83,7 +83,276 @@
                 </div>
         </nav>
     </div>
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyL1wBhNljjKc6KCWoVVRUB7LEkeXHQIszLJAgyprWO9XsvH79fYyYCdH8LLv7uz3vW/exec';
 
+let user = null;
+let cache = [];
+let filteredCache = [];
+let markedToday = new Set();
+let inactivityTimer;
+
+// ================== UTILS ==================
+
+function toast(msg, type="success") {
+    const t = document.createElement("div");
+    t.innerText = msg;
+    t.className = `fixed bottom-24 left-1/2 -translate-x-1/2 px-6 py-3 rounded-xl text-white text-sm shadow-lg z-[9999] ${
+        type === "error" ? "bg-rose-500" : "bg-emerald-600"
+    }`;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2500);
+}
+
+function playSound(type) {
+    const sounds = {
+        success: "https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg",
+        error: "https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg",
+        click: "https://actions.google.com/sounds/v1/ui/click.ogg"
+    };
+    new Audio(sounds[type]).play();
+}
+
+async function safeFetch(body) {
+    try {
+        const res = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify(body)
+        });
+        return await res.json();
+    } catch(e) {
+        saveOffline(body);
+        toast("Offline mode: saved locally", "error");
+    }
+}
+
+// ================== OFFLINE ==================
+
+function saveOffline(data) {
+    let offline = JSON.parse(localStorage.getItem("offline") || "[]");
+    offline.push(data);
+    localStorage.setItem("offline", JSON.stringify(offline));
+}
+
+async function syncOffline() {
+    let offline = JSON.parse(localStorage.getItem("offline") || "[]");
+    if (!offline.length) return;
+
+    for (let item of offline) {
+        await safeFetch(item);
+    }
+
+    localStorage.removeItem("offline");
+    toast("Offline data synced");
+}
+
+window.addEventListener("online", syncOffline);
+window.addEventListener("offline", () => toast("No Internet", "error"));
+
+// ================== LOGIN ==================
+
+async function doLogin() {
+    const email = email.value;
+    const password = pass.value;
+
+    if(!email || !password) return toast("Fill all fields", "error");
+
+    lbtn.disabled = true;
+    lbtn.innerHTML = "Verifying...";
+
+    const data = await safeFetch({ action:'login', email, password });
+
+    if(data && data.success) {
+        user = data;
+        login-view.remove();
+        app.classList.remove('hidden');
+
+        renderNav();
+        user.role === 'SUPER_ADMIN' ? goMaster() : goMark();
+
+        toast("Welcome");
+        playSound("success");
+    } else {
+        toast("Login failed", "error");
+        playSound("error");
+    }
+
+    lbtn.disabled = false;
+    lbtn.innerHTML = "Enter Portal";
+}
+
+// ================== NAV ==================
+
+function renderNav() {
+    if(user.role === 'SUPER_ADMIN') {
+        navbar.innerHTML = `
+        <button onclick="goMaster()">Dashboard</button>
+        <button onclick="goAdmins()">Admins</button>
+        <button onclick="showChart()">Analytics</button>`;
+    } else {
+        navbar.innerHTML = `
+        <button onclick="goMark()">Mark</button>
+        <button onclick="goEditToday()">Edit</button>
+        <button onclick="pdfSelf()">Report</button>
+        <button onclick="showProfile()">Profile</button>`;
+    }
+}
+
+// ================== ATTENDANCE ==================
+
+function goMark() {
+    let idx = 0;
+
+    const draw = () => {
+        if(idx >= user.recruits.length) {
+            main-content.innerHTML = `<h2>Done</h2>`;
+            return;
+        }
+
+        main-content.innerHTML = `
+        <h2>${user.recruits[idx]}</h2>
+        <p>${idx+1}/${user.recruits.length}</p>
+        <button onclick="save(1)">PRESENT</button>
+        <button onclick="save(0)">ABSENT</button>`;
+    };
+
+    window.save = async (s) => {
+        let name = user.recruits[idx];
+
+        if(markedToday.has(name)) {
+            toast("Already marked", "error");
+            return;
+        }
+
+        markedToday.add(name);
+
+        await safeFetch({
+            action:'save_attendance',
+            email:user.email,
+            name,
+            status:s
+        });
+
+        playSound("success");
+        idx++;
+        draw();
+    };
+
+    draw();
+}
+
+// ================== DASHBOARD ==================
+
+async function goMaster() {
+    cache = await safeFetch({ action:'get_master_stats' });
+    drawTable(cache);
+}
+
+function drawTable(data) {
+    filteredCache = data;
+
+    main-content.innerHTML = `
+    <table>
+        ${data.map((r,i)=>`
+        <tr>
+            <td>${i+1}</td>
+            <td>${r.name}</td>
+            <td>${r.count}</td>
+        </tr>`).join('')}
+    </table>`;
+}
+
+// ================== SEARCH ==================
+
+function runSearch() {
+    let q = srch.value.toLowerCase();
+
+    if(!q) return drawTable(cache);
+
+    drawTable(cache.filter(r =>
+        r.name.toLowerCase().includes(q) ||
+        r.admin.toLowerCase().includes(q)
+    ));
+}
+
+// ================== PDF ==================
+
+function pdfAll() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    let data = filteredCache.length ? filteredCache : cache;
+
+    doc.text("REPORT", 10,10);
+
+    doc.autoTable({
+        body: data.map(r => [r.name, r.count])
+    });
+
+    doc.save("report.pdf");
+}
+
+// ================== CHART ==================
+
+function showChart() {
+    main-content.innerHTML = `<canvas id="chart"></canvas>`;
+
+    let ctx = document.getElementById('chart');
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: cache.map(r=>r.name),
+            datasets: [{
+                label: 'Attendance',
+                data: cache.map(r=>r.count)
+            }]
+        }
+    });
+}
+
+// ================== PROFILE ==================
+
+function showProfile() {
+    main-content.innerHTML = `
+    <div>
+        <h2>${user.email}</h2>
+        <input type="file" onchange="uploadAvatar(event)">
+        <img id="avatar" width="100">
+    </div>`;
+}
+
+function uploadAvatar(e) {
+    let file = e.target.files[0];
+    let reader = new FileReader();
+
+    reader.onload = () => {
+        localStorage.setItem("avatar", reader.result);
+        avatar.src = reader.result;
+    };
+
+    reader.readAsDataURL(file);
+}
+
+// ================== AUTO LOGOUT ==================
+
+function resetTimer() {
+    clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(()=>{
+        toast("Session expired");
+        location.reload();
+    }, 600000);
+}
+
+['click','mousemove','keypress'].forEach(e=>{
+    document.addEventListener(e, resetTimer);
+});
+resetTimer();
+
+// ================== INIT ==================
+
+syncOffline();
+</script>
  <!--   <script>
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyL1wBhNljjKc6KCWoVVRUB7LEkeXHQIszLJAgyprWO9XsvH79fYyYCdH8LLv7uz3vW/exec';
         let user = null;
@@ -323,7 +592,7 @@
         }
 
         lucide.createIcons();
-    </script>-->
+    </script>
     <script>
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyL1wBhNljjKc6KCWoVVRUB7LEkeXHQIszLJAgyprWO9XsvH79fYyYCdH8LLv7uz3vW/exec';
 
@@ -600,6 +869,6 @@ syncOffline();
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js');
 }
-</script>
+</script>-->
 </body>
 </html>
