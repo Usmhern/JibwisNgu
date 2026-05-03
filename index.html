@@ -326,7 +326,7 @@
     </script>
 </body>
 </html>
--->
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -506,4 +506,186 @@
 </script>
 </body>
     </html>
-    
+    -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JIBWIS PRO MAX</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+
+<style>
+body{font-family:sans-serif;background:#f8fafc}
+.btn{padding:12px;border-radius:10px}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="login-view">
+    <h2>Login</h2>
+    <input id="email" placeholder="Email"><br><br>
+    <input id="pass" type="password" placeholder="Password"><br><br>
+    <button onclick="doLogin()" class="btn">Login</button>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none">
+
+<h3 id="user-role"></h3>
+
+<input id="srch" oninput="runSearch()" placeholder="Search...">
+
+<div id="main-content"></div>
+
+<button onclick="pdfAll()">Download PDF</button>
+
+</div>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyL1wBhNljjKc6KCWoVVRUB7LEkeXHQIszLJAgyprWO9XsvH79fYyYCdH8LLv7uz3vW/exec';
+
+let user=null;
+let cache=[];
+let filteredCache=[];
+
+// LOGIN
+async function doLogin(){
+    let email=email.value;
+    let password=pass.value;
+
+    let res=await fetch(SCRIPT_URL,{
+        method:'POST',
+        body:JSON.stringify({action:'login',email,password})
+    });
+
+    let data=await res.json();
+
+    if(data.success){
+        user=data;
+        document.getElementById("login-view").style.display="none";
+        document.getElementById("app").style.display="block";
+
+        document.getElementById("user-role").innerText=user.role;
+
+        if(user.role==="SUPER_ADMIN") goMaster();
+        else goMark();
+    } else alert("Login failed");
+}
+
+// ATTENDANCE
+function goMark(){
+    let idx=0;
+
+    function draw(){
+        if(idx>=user.recruits.length){
+            main-content.innerHTML="<h2>Done</h2>";
+            return;
+        }
+
+        main-content.innerHTML=`
+        <h2>${user.recruits[idx]}</h2>
+        <button onclick="save(1)">PRESENT</button>
+        <button onclick="save(0)">ABSENT</button>`;
+    }
+
+    window.save=async(s)=>{
+        let name=user.recruits[idx];
+
+        await fetch(SCRIPT_URL,{
+            method:'POST',
+            body:JSON.stringify({
+                action:'save_attendance',
+                email:user.email,
+                name,
+                status:s
+            })
+        });
+
+        idx++;
+        draw();
+    }
+
+    draw();
+}
+
+// MASTER
+async function goMaster(){
+    let res=await fetch(SCRIPT_URL,{
+        method:'POST',
+        body:JSON.stringify({action:'get_master_stats'})
+    });
+
+    cache=await res.json();
+    drawTable(cache);
+}
+
+function drawTable(data){
+    filteredCache=data;
+
+    main-content.innerHTML=`
+    <table border="1">
+    ${data.map((r,i)=>`
+    <tr>
+    <td>${i+1}</td>
+    <td>${r.name}</td>
+    <td>${r.count}</td>
+    </tr>`).join("")}
+    </table>`;
+}
+
+// SEARCH
+function runSearch(){
+    let q=srch.value.toLowerCase();
+
+    if(!q) return drawTable(cache);
+
+    drawTable(cache.filter(r =>
+        r.name.toLowerCase().includes(q) ||
+        r.admin.toLowerCase().includes(q)
+    ));
+}
+
+// PDF
+function pdfAll(){
+    const { jsPDF } = window.jspdf;
+    let doc=new jsPDF();
+
+    let data=filteredCache.length?filteredCache:cache;
+
+    doc.text("REPORT",10,10);
+
+    doc.autoTable({
+        body:data.map(r=>[r.name,r.count])
+    });
+
+    doc.save("report.pdf");
+}
+
+// REALTIME
+setInterval(async()=>{
+    if(!user) return;
+
+    let res=await fetch(SCRIPT_URL,{
+        method:'POST',
+        body:JSON.stringify({action:'get_master_stats'})
+    });
+
+    let updated=await res.json();
+
+    if(JSON.stringify(updated)!==JSON.stringify(cache)){
+        cache=updated;
+        drawTable(cache);
+    }
+},10000);
+
+</script>
+
+</body>
+</html>
